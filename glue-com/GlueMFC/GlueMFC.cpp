@@ -155,7 +155,7 @@ BOOL CGlueMFCApp::InitInstance()
 	m_pMainWnd->UpdateWindow();
 
 	auto view = dynamic_cast<CGlueMFCView*>(dynamic_cast<CMainFrame*>(m_pMainWnd)->GetActiveView());
-	view->RegisterGlueWindow(m_pMainWnd);
+	view->RegisterGlueWindow(m_pMainWnd, true);
 
 	return TRUE;
 }

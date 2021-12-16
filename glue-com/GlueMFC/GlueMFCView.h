@@ -36,7 +36,7 @@ public:
 protected:
 // Implementation
 public:
-	void RegisterGlueWindow(CWnd* wnd);
+	void RegisterGlueWindow(CWnd* wnd, bool main = false);
 	void OnInitialUpdate() override; // called first time after construct
 	~CGlueMFCView() override;
 #ifdef _DEBUG

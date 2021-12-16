@@ -116,9 +116,15 @@ HRESULT CGlueMFCView::raw_HandleWindowDestroyed(IGlueWindow* GlueWindow)
 	return S_OK;
 }
 
-void CGlueMFCView::RegisterGlueWindow(CWnd* wnd)
+void CGlueMFCView::RegisterGlueWindow(CWnd* wnd, bool main)
 {
-	m_cGlueWindow = theGlue->RegisterGlueWindow(reinterpret_cast<long>(wnd->m_hWnd), this);
+	auto settings = theGlue->CreateDefaultVBGlueWindowSettings();
+	settings->Type = "Tab";
+
+	m_cGlueWindow = main ? theGlue->RegisterStartupGlueWindowWithSettings(reinterpret_cast<long>(wnd->m_hWnd), settings, this) :
+		theGlue->RegisterGlueWindowWithSettings(reinterpret_cast<long>(wnd->m_hWnd), settings, this);
+
+	settings->Release();
 }
 
 void CGlueMFCView::OnInitialUpdate()
