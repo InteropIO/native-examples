@@ -13,6 +13,8 @@
 #include "GlueMFCDoc.h"
 #include "GlueMFCView.h"
 
+#include <map>
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -24,6 +26,7 @@ IMPLEMENT_DYNCREATE(CGlueMFCView, CView)
 BEGIN_MESSAGE_MAP(CGlueMFCView, CView)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
+	ON_BN_CLICKED(1, OnSetGlueContextClicked)
 END_MESSAGE_MAP()
 
 // CGlueMFCView construction/destruction
@@ -74,16 +77,28 @@ HRESULT __stdcall CGlueMFCView::raw_HandleWindowReady(
 	return S_OK;
 }
 
-HTREEITEM AddItem(CGlueMFCView *owner, HTREEITEM *node, const char *data)
+HTREEITEM AddItem(CGlueMFCView *owner, HTREEITEM *node, const char *data, bool leaf)
 {
 	HTREEITEM n;
+	CTreeCtrl* tree = owner->GetTree();
 	if (node == nullptr)
 	{
-		n = owner->GetTree()->InsertItem(CA2W(data));
+		n = tree->InsertItem(CA2W(data));
 	}
 	else
 	{
-		n = owner->GetTree()->InsertItem(CA2W(data), *node);
+		if (leaf)
+		{
+			CString str;
+			str.Format(TEXT("%s = %hs"), tree->GetItemText(*node), data);
+
+			tree->SetItemText(*node, str);
+			n = *node;
+		}
+		else
+		{
+			n = tree->InsertItem(CA2W(data), *node);
+		}
 	}
 	return n;
 }
@@ -95,10 +110,17 @@ HRESULT CGlueMFCView::raw_HandleChannelData(IGlueWindow* GlueWindow, IGlueContex
 
 HRESULT CGlueMFCView::PopulateContext(IGlueContext* context)
 {
+	//_variant_t first_name_as_variant = context->GetReflectData("data.contact.name.firstName"); // this will be a string
+	//_variant_t contact_as_variant = context->GetReflectData("data.contact"); // this will be the safearray
+
+	//_bstr_t first_name_as_json = context->GetDataAsJson("data.contact.name.firstName"); // if the value is a leaf you will get it as json value - {"John"}
+	//_bstr_t composite_name_as_json = context->GetDataAsJson("data.contact.name"); // you will get the composite as a nice json encoded string
+
+	auto data = context->GetData();
 	m_tree.DeleteAllItems();
 	auto parent = m_tree.InsertItem(context->GetContextInfo().Name, 0, 0, TVI_ROOT);
 	
-	TraverseContextValues<CGlueMFCView, HTREEITEM>(context->GetData(), this, &parent, &AddItem);
+	TraverseContextValues<CGlueMFCView, HTREEITEM>(data, this, &parent, &AddItem);
 
 	m_tree.Invalidate();
 		
@@ -119,11 +141,13 @@ HRESULT CGlueMFCView::raw_HandleWindowDestroyed(IGlueWindow* GlueWindow)
 void CGlueMFCView::RegisterGlueWindow(CWnd* wnd, bool main)
 {
 	auto settings = theGlue->CreateDefaultVBGlueWindowSettings();
+
 	settings->Type = "Tab";
+	settings->Title = "Something-something-dark-side";
+	settings->StandardButtons = "LockUnlock, Extract, Collapse, Minimize, Maximize, Close";
 
 	m_cGlueWindow = main ? theGlue->RegisterStartupGlueWindowWithSettings(reinterpret_cast<long>(wnd->m_hWnd), settings, this) :
 		theGlue->RegisterGlueWindowWithSettings(reinterpret_cast<long>(wnd->m_hWnd), settings, this);
-
 	settings->Release();
 }
 
@@ -176,9 +200,12 @@ int CGlueMFCView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// TODO:  Add your specialized creation code here
 	const LPRECT r = new tagRECT;
 	this->GetWindowRect(r);
-	const CRect rectDummy(0, 0, 0, 0);
+
+	m_button.Create(_T("Set Glue Context"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		CRect(10, 10, 160, 30), this, 1);
+
 	m_tree.Create(WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP,
-		rectDummy, this, 0x1221);
+		CRect(0, 45, 0, 0), this, 0x1221);
 	m_tree.SetIndent(30);
 
 	return 0;
@@ -190,4 +217,19 @@ void CGlueMFCView::OnSize(UINT nType, int cx, int cy)
 	__super::OnSize(nType, cx, cy);
 	m_tree.SetWindowPos(nullptr, -1, -1, cx, cy,
 	                    SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+void CGlueMFCView::OnSetGlueContextClicked()
+{
+	const auto context = m_cGlueWindow->GetChannelContext();
+	if (context != nullptr)
+	{
+		// this will try and convert the value passed to variant and the 'other' side will serialize it as best as it could
+		// e.g. all glue types (int, double, string ...) and respectively their arrays
+		//context->SetValue("data.setMeHere.inner", "some string value");
+
+		// alternatively you can send objects encoded as json strings
+		// note that you have to pass valid json here
+		context->UpdateContextDataJson("data.setMeHere.inner", "{parent: {child: {age: 5, name:\"Jay\"}}}");
+	}
 }

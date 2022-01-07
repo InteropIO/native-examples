@@ -34,7 +34,7 @@ namespace GlueCOM
 	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
 	extern HRESULT Validate();
 	template<typename T, typename N>
-	HRESULT TraverseContextValues(SAFEARRAY* saValues, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*) = nullptr)
+	HRESULT TraverseContextValues(SAFEARRAY* saValues, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
 	{
 		void* pVoid;
 		HRESULT hr = SafeArrayAccessData(saValues, &pVoid);
@@ -64,7 +64,7 @@ namespace GlueCOM
 
 					if (addNode != nullptr)
 					{
-						nn = addNode(tree, node, _com_util::ConvertBSTRToString(inner->Name));
+						nn = addNode(tree, node, _com_util::ConvertBSTRToString(inner->Name), false);
 					}
 
 					TraverseValue<T, N>(inner->Value, tree, &nn, addNode);
@@ -74,7 +74,7 @@ namespace GlueCOM
 				GlueContextValue gcv = cvs[i];
 				if (addNode != nullptr)
 				{
-					nn = addNode(tree, node, _com_util::ConvertBSTRToString(gcv.Name));
+					nn = addNode(tree, node, _com_util::ConvertBSTRToString(gcv.Name), false);
 				}
 				TraverseValue<T, N>(gcv.Value, tree, &nn, addNode);
 			}
@@ -86,7 +86,7 @@ namespace GlueCOM
 	}
 
 	template<typename T, typename N>
-	extern HRESULT TraverseValue(GlueValue value, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*) = nullptr)
+	extern HRESULT TraverseValue(GlueValue value, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
 	{
 		if (value.IsArray)
 		{
@@ -137,7 +137,7 @@ namespace GlueCOM
 
 					if (addNode != nullptr)
 					{
-						addNode(tree, node, os.str().c_str());
+						addNode(tree, node, os.str().c_str(), true);
 					}
 
 					SafeArrayDestroy(saValues);
@@ -160,7 +160,7 @@ namespace GlueCOM
 
 					if (addNode != nullptr)
 					{
-						addNode(tree, node, os.str().c_str());
+						addNode(tree, node, os.str().c_str(), true);
 					}
 
 					SafeArrayDestroy(saValues);
@@ -184,7 +184,7 @@ namespace GlueCOM
 
 					if (addNode != nullptr)
 					{
-						addNode(tree, node, os.str().c_str());
+						addNode(tree, node, os.str().c_str(), true);
 					}
 
 					SafeArrayDestroy(saValues);
@@ -219,32 +219,32 @@ namespace GlueCOM
 			case GlueValueType_Double:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.DoubleValue)[0]);
+					addNode(tree, node, &to_string(value.DoubleValue)[0], true);
 				}
 				break;
 			case GlueValueType_String:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, _com_util::ConvertBSTRToString(value.StringValue));
+					addNode(tree, node, _com_util::ConvertBSTRToString(value.StringValue), true);
 				}
 
 				break;
 			case GlueValueType_Int:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.LongValue)[0]);
+					addNode(tree, node, &to_string(value.LongValue)[0], true);
 				}
 				break;
 			case GlueValueType_Bool:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.BoolValue)[0]);
+					addNode(tree, node, &to_string(value.BoolValue)[0], true);
 				}
 				break;
 			case GlueValueType_Long:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.LongValue)[0]);
+					addNode(tree, node, &to_string(value.LongValue)[0], true);
 				}
 				break;
 			case GlueValueType_Composite:
@@ -252,7 +252,7 @@ namespace GlueCOM
 			case GlueValueType_DateTime:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.LongValue)[0]);
+					addNode(tree, node, &to_string(value.LongValue)[0], true);
 				}
 				break;
 			case GlueValueType_Tuple:
