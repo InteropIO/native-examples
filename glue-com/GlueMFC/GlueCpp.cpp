@@ -24,24 +24,31 @@ namespace GlueCOM
 
 		return S_FALSE;
 	}
-		
-	HRESULT Validate()
-	{
-		IRecordInfo* pGlueInstanceRI;
-		IRecordInfo* pGlueContextValueRI;
 
-		if (FAILED(GetRecordInfo(__uuidof(GlueInstance), &pGlueInstanceRI)))
+	IRecordInfo* ri_glue_instance;
+	IRecordInfo* ri_glue_context_value;
+	IRecordInfo* ri_glue_value;
+
+	HRESULT ExtractGlueRecordInfos()
+	{
+		if (FAILED(GetRecordInfo(__uuidof(GlueInstance), &ri_glue_instance)))
 		{
 			cout << "Failed while getting record info for GlueInstance" << endl;
 			return -1;
 		}
 
-		if (FAILED(GetRecordInfo(__uuidof(GlueContextValue), &pGlueContextValueRI)))
+		if (FAILED(GetRecordInfo(__uuidof(GlueContextValue), &ri_glue_context_value)))
 		{
 			cout << "Failed while getting record info for GlueContextValue" << endl;
 			return -1;
 		}
 
+		if (FAILED(GetRecordInfo(__uuidof(GlueValue), &ri_glue_value)))
+		{
+			cout << "Failed while getting record info for GlueValue" << endl;
+			return -1;
+		}
+		
 		return S_OK;
 	}
 
@@ -354,9 +361,9 @@ namespace GlueCOM
 			invocationArgs[1].Name = _com_util::ConvertStringToBSTR("DeepArg");
 			invocationArgs[1].Value = {};
 			invocationArgs[1].Value.GlueType = GlueValueType_Composite;
-			invocationArgs[1].Value.CompositeValue = CreateContextValuesVARIANTSafeArray(innerArgs, 2, m_pGlueContextValueRI);
+			invocationArgs[1].Value.CompositeValue = CreateContextValuesVARIANTSafeArray(innerArgs, 2);
 
-			const auto invocationArgsSA = CreateGlueContextValuesSafeArray(invocationArgs, 2, m_pGlueContextValueRI);
+			const auto invocationArgsSA = CreateGlueContextValuesSafeArray(invocationArgs, 2);
 
 			r.Values = invocationArgsSA;
 
@@ -393,15 +400,13 @@ namespace GlueCOM
 			return l;
 		}
 
-		GlueRequestHandler(IRecordInfo* pGlueContextValueRI)
+		GlueRequestHandler()
 		{
 			m_cRef = 0;
-			m_pGlueContextValueRI = pGlueContextValueRI;
 		}
 
 	private:
 		ULONG m_cRef;
-		IRecordInfo* m_pGlueContextValueRI;
 
 	};
 
@@ -467,13 +472,13 @@ namespace GlueCOM
 	};
 
 	// creates GlueInstance[]
-	SAFEARRAY* CreateGlueInstanceSafeArray(GlueInstance* glueInstances, int len, IRecordInfo* recordInfo)
+	SAFEARRAY* CreateGlueInstanceSafeArray(GlueInstance* glueInstances, int len)
 	{
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
 
-		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, recordInfo);
+		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, ri_glue_instance);
 
 		long ind = 0;
 		for (int i = 0; i < len; ++i)
@@ -486,13 +491,13 @@ namespace GlueCOM
 	}
 
 	// creates GlueContextValue[]
-	SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len, IRecordInfo* recordInfo)
+	SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len)
 	{
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
 
-		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, recordInfo);
+		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, ri_glue_context_value);
 
 		long ind = 0;
 		for (int i = 0; i < len; ++i)
@@ -505,13 +510,13 @@ namespace GlueCOM
 	}
 
 	// creates GlueValue[]
-	SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len, IRecordInfo* recordInfo)
+	SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len)
 	{
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
 
-		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, recordInfo);
+		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, ri_glue_value);
 
 		long ind = 0;
 		for (int i = 0; i < len; ++i)
@@ -524,7 +529,7 @@ namespace GlueCOM
 	}
 
 	// variant[] corresponds to object[]
-	SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len, IRecordInfo* recordInfo)
+	SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len)
 	{
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
@@ -538,7 +543,7 @@ namespace GlueCOM
 			VARIANT item;
 			VariantInit(&item);
 			item.vt = VT_RECORD;
-			item.pRecInfo = recordInfo;
+			item.pRecInfo = ri_glue_context_value;
 			item.pvRecord = &contextValues[i];
 
 			SafeArrayPutElement(safeargs, &ind, &item);
@@ -548,7 +553,7 @@ namespace GlueCOM
 		return safeargs;
 	}
 
-	SAFEARRAY* CreateValuesVARIANTSafeArray(GlueValue* contextValues, int len, IRecordInfo* recordInfo)
+	SAFEARRAY* CreateValuesVARIANTSafeArray(GlueValue* contextValues, int len)
 	{
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
@@ -562,7 +567,7 @@ namespace GlueCOM
 			VARIANT item;
 			VariantInit(&item);
 			item.vt = VT_RECORD;
-			item.pRecInfo = recordInfo;
+			item.pRecInfo = ri_glue_value;
 			item.pvRecord = &contextValues[i];
 
 			SafeArrayPutElement(safeargs, &ind, &item);

@@ -55,7 +55,7 @@ CGlueMFCApp::CGlueMFCApp() noexcept
 
 	hr = CoCreateInstance(CLSID_Glue42, nullptr, CLSCTX_INPROC_SERVER, IID_IGlue42, reinterpret_cast<void**>(&theGlue));
 	throw_if_fail(hr);
-	throw_if_fail(Validate());
+	throw_if_fail(ExtractGlueRecordInfos());
 }
 
 HRESULT CGlueMFCApp::raw_CreateApp(BSTR appDefName, GlueValue state, IAppAnnouncer* announcer)

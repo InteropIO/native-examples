@@ -32,7 +32,7 @@ namespace GlueCOM
 
 	template<typename T>
 	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
-	extern HRESULT Validate();
+	extern HRESULT ExtractGlueRecordInfos();
 	template<typename T, typename N>
 	HRESULT TraverseContextValues(SAFEARRAY* saValues, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
 	{
@@ -263,9 +263,9 @@ namespace GlueCOM
 
 		return S_OK;
 	}
-	extern SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len, IRecordInfo* recordInfo);
-	extern SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len, IRecordInfo* recordInfo);
-	extern SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len, IRecordInfo* recordInfo);
+	extern SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len);
+	extern SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len);
+	extern SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len);
 	extern HRESULT CreateGlueContextsFromSafeArray(SAFEARRAY* sa, GlueContext** gc, long* count);
 	extern HRESULT GetRecordInfo(REFGUID rGuidTypeInfo, IRecordInfo** pRecordInfo);
 	extern HRESULT GetIRecordType(
