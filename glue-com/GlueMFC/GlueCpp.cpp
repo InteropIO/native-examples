@@ -31,24 +31,21 @@ namespace GlueCOM
 
 	HRESULT ExtractGlueRecordInfos()
 	{
-		if (FAILED(GetRecordInfo(__uuidof(GlueInstance), &ri_glue_instance)))
+		if (ri_glue_instance == nullptr)
 		{
-			cout << "Failed while getting record info for GlueInstance" << endl;
-			return -1;
+			throw_if_fail(GetRecordInfo(__uuidof(GlueInstance), &ri_glue_instance));
 		}
 
-		if (FAILED(GetRecordInfo(__uuidof(GlueContextValue), &ri_glue_context_value)))
+		if (ri_glue_context_value == nullptr)
 		{
-			cout << "Failed while getting record info for GlueContextValue" << endl;
-			return -1;
+			throw_if_fail(GetRecordInfo(__uuidof(GlueContextValue), &ri_glue_context_value));
 		}
 
-		if (FAILED(GetRecordInfo(__uuidof(GlueValue), &ri_glue_value)))
+		if (ri_glue_value == nullptr)
 		{
-			cout << "Failed while getting record info for GlueValue" << endl;
-			return -1;
+			throw_if_fail(GetRecordInfo(__uuidof(GlueValue), &ri_glue_value));
 		}
-		
+
 		return S_OK;
 	}
 
@@ -474,6 +471,8 @@ namespace GlueCOM
 	// creates GlueInstance[]
 	SAFEARRAY* CreateGlueInstanceSafeArray(GlueInstance* glueInstances, int len)
 	{
+		throw_if_fail(ExtractGlueRecordInfos());
+
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
@@ -483,7 +482,7 @@ namespace GlueCOM
 		long ind = 0;
 		for (int i = 0; i < len; ++i)
 		{
-			SafeArrayPutElement(safeargs, &ind, &glueInstances[i]);
+			throw_if_fail(SafeArrayPutElement(safeargs, &ind, &glueInstances[i]));
 			ind++;
 		}
 
@@ -493,6 +492,8 @@ namespace GlueCOM
 	// creates GlueContextValue[]
 	SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len)
 	{
+		throw_if_fail(ExtractGlueRecordInfos());
+
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
@@ -502,7 +503,7 @@ namespace GlueCOM
 		long ind = 0;
 		for (int i = 0; i < len; ++i)
 		{
-			SafeArrayPutElement(safeargs, &ind, &values[i]);
+			throw_if_fail(SafeArrayPutElement(safeargs, &ind, &values[i]));
 			ind++;
 		}
 
@@ -512,6 +513,8 @@ namespace GlueCOM
 	// creates GlueValue[]
 	SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len)
 	{
+		throw_if_fail(ExtractGlueRecordInfos());
+
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
@@ -521,7 +524,7 @@ namespace GlueCOM
 		long ind = 0;
 		for (int i = 0; i < len; ++i)
 		{
-			SafeArrayPutElement(safeargs, &ind, &values[i]);
+			throw_if_fail(SafeArrayPutElement(safeargs, &ind, &values[i]));
 			ind++;
 		}
 
@@ -531,6 +534,8 @@ namespace GlueCOM
 	// variant[] corresponds to object[]
 	SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len)
 	{
+		throw_if_fail(ExtractGlueRecordInfos());
+
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
@@ -546,7 +551,7 @@ namespace GlueCOM
 			item.pRecInfo = ri_glue_context_value;
 			item.pvRecord = &contextValues[i];
 
-			SafeArrayPutElement(safeargs, &ind, &item);
+			throw_if_fail(SafeArrayPutElement(safeargs, &ind, &item));
 			ind++;
 		}
 
@@ -555,6 +560,8 @@ namespace GlueCOM
 
 	SAFEARRAY* CreateValuesVARIANTSafeArray(GlueValue* contextValues, int len)
 	{
+		throw_if_fail(ExtractGlueRecordInfos());
+
 		SAFEARRAYBOUND bounds[1];
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
@@ -570,7 +577,7 @@ namespace GlueCOM
 			item.pRecInfo = ri_glue_value;
 			item.pvRecord = &contextValues[i];
 
-			SafeArrayPutElement(safeargs, &ind, &item);
+			throw_if_fail(SafeArrayPutElement(safeargs, &ind, &item));
 			ind++;
 		}
 
