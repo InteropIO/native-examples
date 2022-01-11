@@ -31,10 +31,136 @@ namespace GlueCOM
 	IRecordInfo* ri_glue_context_value;
 	IRecordInfo* ri_glue_value;
 
-	HRESULT DestroyContextValuesSA(SAFEARRAY* sa, int count)
+	HRESULT DestroyValue(const GlueValue& value)
 	{
-		//TraverseContextValues(sa, nullptr, )
-		return S_OK;
+		if (value.IsArray)
+		{
+			switch (value.GlueType)
+			{
+			case GlueValueType_Tuple:
+			{
+				SAFEARRAY* saValues = value.Tuple;
+				if (saValues == nullptr)
+				{
+					return S_OK;
+				}
+
+				void* pVoid;
+				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
+				const VARIANT* pTuple = static_cast<VARIANT*>(pVoid);
+
+				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				{
+					GlueValue* inner = static_cast<GlueValue*>(pTuple[i].pvRecord);
+					DestroyValue(*inner);
+				}
+
+				SafeArrayUnaccessData(saValues);
+			}
+			break;
+			case GlueValueType_Composite:
+				return DestroyContextValuesSA(value.CompositeValue);
+			case GlueValueType_Int:
+			case GlueValueType_Long:
+			case GlueValueType_DateTime:
+			{
+				SAFEARRAY* saValues = value.LongArray;
+				throw_if_fail(SafeArrayDestroy(saValues));
+			}
+			break;
+			case GlueValueType_Double:
+			{
+				SAFEARRAY* saValues = value.DoubleArray;
+				throw_if_fail(SafeArrayDestroy(saValues));
+			}
+			break;
+
+			case GlueValueType_String:
+			{
+				void* pVoid;
+				SAFEARRAY* saValues = value.StringArray;
+				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
+
+				const BSTR* pStrings = static_cast<BSTR*>(pVoid);
+
+				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				{
+					SysFreeString(pStrings[i]);
+				}				
+
+				SafeArrayUnaccessData(saValues);
+				throw_if_fail(SafeArrayDestroy(saValues));
+			}
+			break;
+			case GlueValueType_Bool:
+			{
+				SAFEARRAY* saValues = value.BoolArray;
+				throw_if_fail(SafeArrayDestroy(saValues));
+			}
+			break;
+			}
+		}
+		else
+		{
+			switch (value.GlueType)
+			{
+			case GlueValueType_String:
+				SysFreeString(value.StringValue);
+				break;
+			case GlueValueType_Composite:
+				return DestroyContextValuesSA(value.CompositeValue);
+			default:
+				break;
+			}
+		}
+
+		return S_OK;		
+	}
+
+	HRESULT DestroyContextValuesSA(SAFEARRAY* sa)
+	{
+		void* pVoid;
+		HRESULT hr = SafeArrayAccessData(sa, &pVoid);
+		throw_if_fail(hr);
+
+		if (SUCCEEDED(hr))
+		{
+			long lowerBound, upperBound; // get array bounds
+			SafeArrayGetLBound(sa, 1, &lowerBound);
+			SafeArrayGetUBound(sa, 1, &upperBound);
+
+			// it's either array of GlueContextValue
+			const GlueContextValue* cvs = static_cast<GlueContextValue*>(pVoid);
+
+			// or Variant array with each item as GlueContextValue
+			const VARIANT* inners = static_cast<VARIANT*>(pVoid);
+
+			long cnt_elements = upperBound - lowerBound + 1;
+			for (int i = 0; i < cnt_elements; ++i) // iterate through returned values
+			{
+				VARIANT vv = inners[i];
+				std::cout << vv.vt << endl;
+				if (vv.vt == VT_RECORD)
+				{
+					GlueContextValue* inner = static_cast<GlueContextValue*>(vv.pvRecord);
+
+					SysFreeString(inner->Name);
+					DestroyValue(inner->Value);
+					continue;
+				}
+
+				GlueContextValue gcv = cvs[i];
+
+				SysFreeString(gcv.Name);
+
+				DestroyValue(gcv.Value);
+			}
+		}
+
+		SafeArrayUnaccessData(sa);
+		SafeArrayDestroy(sa);
+
+		return hr;
 	}
 
 	HRESULT ExtractGlueRecordInfos()

@@ -252,8 +252,6 @@ void CGlueMFCView::OnSetGlueContextClicked()
 
 		context->SetContextDataOnFieldPath("data.outer.something.in.here", sa);
 
-		SafeArrayDestroy(sa);
-
-		// todo: deep free any allocations such as com strings - SysFreeString
+		DestroyContextValuesSA(sa);
 	}
 }

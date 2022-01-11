@@ -32,7 +32,8 @@ namespace GlueCOM
 
 	template<typename T>
 	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
-	extern HRESULT DestroyContextValuesSA(SAFEARRAY* sa, int count);
+	extern HRESULT DestroyValue(const GlueValue& value);
+	extern HRESULT DestroyContextValuesSA(SAFEARRAY* sa);
 
 	extern HRESULT ExtractGlueRecordInfos();
 
