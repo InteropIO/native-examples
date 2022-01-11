@@ -56,6 +56,7 @@ namespace GlueCOM
 				}
 
 				SafeArrayUnaccessData(saValues);
+				SafeArrayDestroy(saValues);
 			}
 			break;
 			case GlueValueType_Composite:
