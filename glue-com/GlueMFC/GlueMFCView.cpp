@@ -231,22 +231,45 @@ void CGlueMFCView::OnSetGlueContextClicked()
 		// note that you have to pass valid json here
 		//context->UpdateContextDataJson("data.setMeHere.inner", "{parent: {child: {age: 5, name:\"Jay\"}}}");
 
-		int len = 5;
+		int len = 55;
 		GlueCOM::GlueContextValue* gvs = new GlueCOM::GlueContextValue[len];
 
-		for (int i = 0; i < len; ++i)
+		for (int ix = 0; ix < len; ++ix)
 		{
-			gvs[i] = {};
+			gvs[ix] = {};
 
 			stringstream str;
-			str << "key_" << i;
+			str << "key_" << ix;
 
-			gvs[i].Name = _com_util::ConvertStringToBSTR(str.str().c_str());
+			gvs[ix].Name = _com_util::ConvertStringToBSTR(str.str().c_str());
 			// default everything
-			gvs[i].Value = {};
-			gvs[i].Value.GlueType = GlueCOM::GlueValueType::GlueValueType_String;
-			gvs[i].Value.StringValue = _com_util::ConvertStringToBSTR("string value");
-		}	
+			gvs[ix].Value = {};
+			if (ix % 2 == 0)
+			{
+				gvs[ix].Value.GlueType = GlueCOM::GlueValueType::GlueValueType_String;
+				gvs[ix].Value.StringValue = _com_util::ConvertStringToBSTR("string value");
+			}
+			else
+			{
+				gvs[ix].Value.GlueType = GlueValueType_Double;
+				gvs[ix].Value.IsArray = true;
+
+				SAFEARRAYBOUND bounds[1];
+				bounds[0].lLbound = 0;
+				double dbl_arr[5] = { 3.14 + ix, 5.1 + ix, 6.7 + ix, 8.1 + ix, 9.2 + ix };
+				bounds[0].cElements = std::size(dbl_arr);
+
+				auto dbl_sa = SafeArrayCreate(VT_R8, 1, bounds);
+				double* d = dbl_arr;
+				for (long dbl_ix = 0; dbl_ix < bounds[0].cElements; ++dbl_ix)
+				{
+					//void* d = &dbl_arr[dbl_ix];
+					throw_if_fail(SafeArrayPutElement(dbl_sa, &dbl_ix, d++));
+				}
+				
+				gvs[ix].Value.DoubleArray = dbl_sa;
+			}
+		}
 
 		auto sa = CreateGlueContextValuesSafeArray(gvs, len);
 

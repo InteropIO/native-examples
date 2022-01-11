@@ -53,8 +53,8 @@ namespace GlueCOM
 					DestroyValue(*inner);
 				}
 
-				SafeArrayUnaccessData(saValues);
-				SafeArrayDestroy(saValues);
+				throw_if_fail(SafeArrayUnaccessData(saValues));
+				throw_if_fail(SafeArrayDestroy(saValues));
 			}
 			break;
 			case GlueValueType_Composite:
@@ -87,7 +87,7 @@ namespace GlueCOM
 					SysFreeString(pStrings[i]);
 				}				
 
-				SafeArrayUnaccessData(saValues);
+				throw_if_fail(SafeArrayUnaccessData(saValues));
 				throw_if_fail(SafeArrayDestroy(saValues));
 			}
 			break;
@@ -148,12 +148,11 @@ namespace GlueCOM
 			GlueContextValue gcv = cvs[i];
 
 			SysFreeString(gcv.Name);
-
 			DestroyValue(gcv.Value);
 		}
 
-		SafeArrayUnaccessData(sa);
-		SafeArrayDestroy(sa);
+		throw_if_fail(SafeArrayUnaccessData(sa));
+		throw_if_fail(SafeArrayDestroyDescriptor(sa));
 
 		return S_OK;
 	}
@@ -555,16 +554,16 @@ namespace GlueCOM
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
 
-		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, ri_glue_instance);
+		SAFEARRAY* sa = SafeArrayCreateEx(VT_RECORD, 1, bounds, ri_glue_instance);
 
 		long ind = 0;
 		for (int i = 0; i < len; ++i)
 		{
-			throw_if_fail(SafeArrayPutElement(safeargs, &ind, &glueInstances[i]));
+			throw_if_fail(SafeArrayPutElement(sa, &ind, &glueInstances[i]));
 			ind++;
 		}
 
-		return safeargs;
+		return sa;
 	}
 
 	// creates GlueContextValue[]
@@ -576,16 +575,14 @@ namespace GlueCOM
 		bounds[0].lLbound = 0;
 		bounds[0].cElements = len;
 
-		SAFEARRAY* safeargs = SafeArrayCreateEx(VT_RECORD, 1, bounds, ri_glue_context_value);
+		SAFEARRAY* sa = SafeArrayCreateEx(VT_RECORD, 1, bounds, ri_glue_context_value);
 
-		long ind = 0;
-		for (int i = 0; i < len; ++i)
+		for (long ix = 0; ix < len; ++ix)
 		{
-			throw_if_fail(SafeArrayPutElement(safeargs, &ind, &values[i]));
-			ind++;
+			throw_if_fail(SafeArrayPutElement(sa, &ix, &values[ix]));
 		}
 
-		return safeargs;
+		return sa;
 	}
 
 	// creates GlueValue[]
