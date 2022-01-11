@@ -25,9 +25,17 @@ namespace GlueCOM
 		return S_FALSE;
 	}
 
+
+
 	IRecordInfo* ri_glue_instance;
 	IRecordInfo* ri_glue_context_value;
 	IRecordInfo* ri_glue_value;
+
+	HRESULT DestroyContextValuesSA(SAFEARRAY* sa, int count)
+	{
+		//TraverseContextValues(sa, nullptr, )
+		return S_OK;
+	}
 
 	HRESULT ExtractGlueRecordInfos()
 	{
@@ -65,6 +73,8 @@ namespace GlueCOM
 
 			return hr;
 		}
+
+		SafeArrayUnaccessData(sa);
 
 		return S_FALSE;
 	}
@@ -250,61 +260,6 @@ namespace GlueCOM
 		int m_depth;
 	};
 
-	class ResultHandler : public IGlueInvocationResultHandler
-	{
-	public:
-		HRESULT HandleResult(
-			SAFEARRAY* invocationResult,
-			_bstr_t correlationId)
-		{
-			return S_OK;
-		}
-
-		HRESULT __stdcall raw_HandleResult(
-			/*[in]*/ SAFEARRAY* invocationResult,
-			/*[in]*/ BSTR correlationId) override
-		{
-			return S_OK;
-		}
-
-		STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override
-		{
-			if (riid == IID_IGlueInvocationResultHandler || riid == IID_IUnknown)
-				*ppv = static_cast<IGlueInvocationResultHandler*>(this);
-			else
-				*ppv = nullptr;
-
-			if (*ppv)
-			{
-				static_cast<IUnknown*>(*ppv)->AddRef();
-				return S_OK;
-			}
-
-			return E_NOINTERFACE;
-		}
-
-		ULONG __stdcall AddRef() override
-		{
-			return InterlockedIncrement(&m_cRef);
-		}
-
-		ULONG __stdcall Release() override
-		{
-			const ULONG l = InterlockedDecrement(&m_cRef);
-			if (l == 0)
-				delete this;
-			return l;
-		}
-
-		ResultHandler()
-		{
-			m_cRef = 0;
-		}
-
-	private:
-		ULONG m_cRef;
-	};
-
 	class GlueRequestHandler : public IGlueRequestHandler
 	{
 	public:
@@ -359,6 +314,8 @@ namespace GlueCOM
 			invocationArgs[1].Value = {};
 			invocationArgs[1].Value.GlueType = GlueValueType_Composite;
 			invocationArgs[1].Value.CompositeValue = CreateContextValuesVARIANTSafeArray(innerArgs, 2);
+
+			
 
 			const auto invocationArgsSA = CreateGlueContextValuesSafeArray(invocationArgs, 2);
 

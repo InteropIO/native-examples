@@ -3,6 +3,8 @@
 //
 
 #include "pch.h"
+#include "GlueCpp.h"
+
 #include "framework.h"
 // SHARED_HANDLERS can be defined in an ATL project implementing preview, thumbnail
 // and search filter handlers and allows sharing of document code with that project.
@@ -12,8 +14,6 @@
 
 #include "GlueMFCDoc.h"
 #include "GlueMFCView.h"
-
-#include <map>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -33,7 +33,6 @@ END_MESSAGE_MAP()
 
 CGlueMFCView::CGlueMFCView() noexcept
 {
-	m_cGlueWindow = nullptr;
 	// TODO: add construction code here
 }
 
@@ -230,6 +229,31 @@ void CGlueMFCView::OnSetGlueContextClicked()
 
 		// alternatively you can send objects encoded as json strings
 		// note that you have to pass valid json here
-		context->UpdateContextDataJson("data.setMeHere.inner", "{parent: {child: {age: 5, name:\"Jay\"}}}");
+		//context->UpdateContextDataJson("data.setMeHere.inner", "{parent: {child: {age: 5, name:\"Jay\"}}}");
+
+		int len = 5;
+		GlueCOM::GlueContextValue* gvs = new GlueCOM::GlueContextValue[len];
+
+		for (int i = 0; i < len; ++i)
+		{
+			gvs[i] = {};
+
+			stringstream str;
+			str << "key_" << i;
+
+			gvs[i].Name = _com_util::ConvertStringToBSTR(str.str().c_str());
+			// default everything
+			gvs[i].Value = {};
+			gvs[i].Value.GlueType = GlueCOM::GlueValueType::GlueValueType_String;
+			gvs[i].Value.StringValue = _com_util::ConvertStringToBSTR("string value");
+		}	
+
+		auto sa = CreateGlueContextValuesSafeArray(gvs, len);
+
+		context->SetContextDataOnFieldPath("data.outer.something.in.here", sa);
+
+		SafeArrayDestroy(sa);
+
+		// todo: deep free any allocations such as com strings - SysFreeString
 	}
 }

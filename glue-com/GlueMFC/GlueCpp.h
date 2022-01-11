@@ -32,19 +32,22 @@ namespace GlueCOM
 
 	template<typename T>
 	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
+	extern HRESULT DestroyContextValuesSA(SAFEARRAY* sa, int count);
+
 	extern HRESULT ExtractGlueRecordInfos();
-	template<typename T, typename N>
-	HRESULT TraverseContextValues(SAFEARRAY* saValues, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
+
+	template <typename T, typename N>
+	HRESULT TraverseContextValues(SAFEARRAY* sa, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
 	{
 		void* pVoid;
-		HRESULT hr = SafeArrayAccessData(saValues, &pVoid);
+		HRESULT hr = SafeArrayAccessData(sa, &pVoid);
 		throw_if_fail(hr);
 
 		if (SUCCEEDED(hr))
 		{
 			long lowerBound, upperBound; // get array bounds
-			SafeArrayGetLBound(saValues, 1, &lowerBound);
-			SafeArrayGetUBound(saValues, 1, &upperBound);
+			SafeArrayGetLBound(sa, 1, &lowerBound);
+			SafeArrayGetUBound(sa, 1, &upperBound);
 
 			// it's either array of GlueContextValue
 			const GlueContextValue* cvs = static_cast<GlueContextValue*>(pVoid);
@@ -64,7 +67,9 @@ namespace GlueCOM
 
 					if (addNode != nullptr)
 					{
-						nn = addNode(tree, node, _com_util::ConvertBSTRToString(inner->Name), false);
+						char* name = _com_util::ConvertBSTRToString(inner->Name);
+						nn = addNode(tree, node, name, false);
+						delete[] name;
 					}
 
 					TraverseValue<T, N>(inner->Value, tree, &nn, addNode);
@@ -74,18 +79,20 @@ namespace GlueCOM
 				GlueContextValue gcv = cvs[i];
 				if (addNode != nullptr)
 				{
-					nn = addNode(tree, node, _com_util::ConvertBSTRToString(gcv.Name), false);
+					char* name = _com_util::ConvertBSTRToString(gcv.Name);
+					nn = addNode(tree, node, name, false);
+					delete[] name;
 				}
 				TraverseValue<T, N>(gcv.Value, tree, &nn, addNode);
 			}
 		}
 
-		SafeArrayDestroy(saValues);
+		SafeArrayUnaccessData(sa);
 
 		return hr;
 	}
 
-	template<typename T, typename N>
+	template <typename T, typename N>
 	extern HRESULT TraverseValue(GlueValue value, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
 	{
 		if (value.IsArray)
@@ -94,122 +101,118 @@ namespace GlueCOM
 			switch (value.GlueType)
 			{
 			case GlueValueType_Tuple:
+			{
+				SAFEARRAY* saValues = value.Tuple;
+				if (saValues == nullptr)
 				{
-					SAFEARRAY* saValues = value.Tuple;
-					if (saValues == nullptr)
-					{
-						return S_OK;
-					}
-
-					void* pVoid;
-					HRESULT hr = SafeArrayAccessData(saValues, &pVoid);
-					throw_if_fail(hr);
-					const VARIANT* pTuple = static_cast<VARIANT*>(pVoid);
-
-					for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
-					{
-						GlueValue* inner = static_cast<GlueValue*>(pTuple[i].pvRecord);
-						TraverseValue<T, N>(*inner, tree, node, addNode);
-					}
-
-					SafeArrayDestroy(saValues);
-					cout << endl;
+					return S_OK;
 				}
-				break;
+
+				void* pVoid;
+				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
+				const VARIANT* pTuple = static_cast<VARIANT*>(pVoid);
+
+				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				{
+					GlueValue* inner = static_cast<GlueValue*>(pTuple[i].pvRecord);
+					TraverseValue<T, N>(*inner, tree, node, addNode);
+				}
+
+				SafeArrayUnaccessData(saValues);
+			}
+			break;
 			case GlueValueType_Composite:
 				return TraverseContextValues<T, N>(value.CompositeValue, tree, node, addNode);
 			case GlueValueType_Int:
 			case GlueValueType_Long:
 			case GlueValueType_DateTime:
+			{
+				SAFEARRAY* saValues = value.LongArray;
+
+				void* pVoid;
+				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
+
+				const __int64* pLongs = static_cast<__int64*>(pVoid);
+
+				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
-					SAFEARRAY* saValues = value.LongArray;
-
-					void* pVoid;
-					HRESULT hr = SafeArrayAccessData(saValues, &pVoid);
-					throw_if_fail(hr);
-
-					const __int64* pLongs = static_cast<__int64*>(pVoid);
-
-					for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
-					{
-						os << pLongs[i];
-					}
-
-					if (addNode != nullptr)
-					{
-						addNode(tree, node, os.str().c_str(), true);
-					}
-
-					SafeArrayDestroy(saValues);
-					cout << endl;
+					os << pLongs[i];
 				}
-				break;
+
+				if (addNode != nullptr)
+				{
+					addNode(tree, node, os.str().c_str(), true);
+				}
+
+				SafeArrayUnaccessData(saValues);
+			}
+			break;
 			case GlueValueType_Double:
+			{
+				void* pVoid;
+				SAFEARRAY* saValues = value.DoubleArray;
+				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
+
+				const double* pFloats = static_cast<double*>(pVoid);
+				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
-					void* pVoid;
-					SAFEARRAY* saValues = value.DoubleArray;
-					HRESULT hr = SafeArrayAccessData(saValues, &pVoid);
-					throw_if_fail(hr);
-
-					const double* pFloats = static_cast<double*>(pVoid);
-					for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
-					{
-						os << pFloats[i];
-						cout << "Value is: " << pFloats[i] << ", ";
-					}
-
-					if (addNode != nullptr)
-					{
-						addNode(tree, node, os.str().c_str(), true);
-					}
-
-					SafeArrayDestroy(saValues);
-					cout << endl;
+					os << pFloats[i];
 				}
-				break;
+
+				if (addNode != nullptr)
+				{
+					addNode(tree, node, os.str().c_str(), true);
+				}
+
+				SafeArrayUnaccessData(saValues);
+			}
+			break;
 
 			case GlueValueType_String:
+			{
+				void* pVoid;
+				SAFEARRAY* saValues = value.StringArray;
+				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
+
+				const BSTR* pStrings = static_cast<BSTR*>(pVoid);
+
+				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
-					void* pVoid;
-					SAFEARRAY* saValues = value.StringArray;
-					HRESULT hr = SafeArrayAccessData(saValues, &pVoid);
-					throw_if_fail(hr);
+					char* str = _com_util::ConvertBSTRToString(pStrings[i]);
+					os << str;
 
-					const BSTR* pStrings = static_cast<BSTR*>(pVoid);
-
-					for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
-					{
-						os << _com_util::ConvertBSTRToString(pStrings[i]);
-					}
-
-					if (addNode != nullptr)
-					{
-						addNode(tree, node, os.str().c_str(), true);
-					}
-
-					SafeArrayDestroy(saValues);
-					cout << endl;
+					delete[] str;
 				}
-				break;
+
+				if (addNode != nullptr)
+				{
+					addNode(tree, node, os.str().c_str(), true);
+				}
+
+				SafeArrayUnaccessData(saValues);
+			}
+			break;
 			case GlueValueType_Bool:
+			{
+				void* pVoid;
+				SAFEARRAY* saValues = value.BoolArray;
+				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
+
+				const bool* pBools = static_cast<bool*>(pVoid);
+
+				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
-					void* pVoid;
-					SAFEARRAY* saValues = value.BoolArray;
-					HRESULT hr = SafeArrayAccessData(saValues, &pVoid);
-
-					throw_if_fail(hr);
-
-					const bool* pBools = static_cast<bool*>(pVoid);
-
-					for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
-					{
-						cout << "Value is: " << pBools[i] << ", ";
-					}
-
-					SafeArrayDestroy(saValues);
-					cout << endl;
+					os << pBools[i];
 				}
-				break;
+
+				if (addNode != nullptr)
+				{
+					addNode(tree, node, os.str().c_str(), true);
+				}
+
+				SafeArrayUnaccessData(saValues);
+			}
+			break;
 			}
 		}
 		else
@@ -225,7 +228,9 @@ namespace GlueCOM
 			case GlueValueType_String:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, _com_util::ConvertBSTRToString(value.StringValue), true);
+					const auto str = _com_util::ConvertBSTRToString(value.StringValue);
+					addNode(tree, node, str, true);
+					delete[] str;
 				}
 
 				break;
@@ -263,6 +268,7 @@ namespace GlueCOM
 
 		return S_OK;
 	}
+
 	extern SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len);
 	extern SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len);
 	extern SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len);
