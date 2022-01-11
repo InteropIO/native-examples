@@ -33,12 +33,12 @@ namespace GlueCOM
 	template<typename T>
 	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
 	extern HRESULT DestroyValue(const GlueValue& value);
-	extern HRESULT DestroyContextValuesSA(SAFEARRAY* sa);
+	extern HRESULT DestroyContextValuesSA(SAFEARRAY* sa, bool is_variant_array = false);
 
 	extern HRESULT ExtractGlueRecordInfos();
 
 	template <typename T, typename N>
-	HRESULT TraverseContextValues(SAFEARRAY* sa, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
+	HRESULT TraverseContextValues(SAFEARRAY* sa, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr, bool is_variant_array = false)
 	{
 		void* pVoid;
 		HRESULT hr = SafeArrayAccessData(sa, &pVoid);
@@ -53,17 +53,18 @@ namespace GlueCOM
 			// it's either array of GlueContextValue
 			const GlueContextValue* cvs = static_cast<GlueContextValue*>(pVoid);
 
-			// or Variant array with each item as GlueContextValue
+			// or Variant array with each item as GlueContextValue (when this is composite)
 			const VARIANT* inners = static_cast<VARIANT*>(pVoid);
 
 			long cnt_elements = upperBound - lowerBound + 1;
 			for (int i = 0; i < cnt_elements; ++i) // iterate through returned values
 			{
 				N nn;
-				VARIANT vv = inners[i];
-				std::cout << vv.vt << endl;
-				if (vv.vt == VT_RECORD)
+
+				if (is_variant_array)
 				{
+					VARIANT vv = inners[i];
+					assert(vv.vt == VT_RECORD);
 					GlueContextValue* inner = static_cast<GlueContextValue*>(vv.pvRecord);
 
 					if (addNode != nullptr)
@@ -123,7 +124,7 @@ namespace GlueCOM
 			}
 			break;
 			case GlueValueType_Composite:
-				return TraverseContextValues<T, N>(value.CompositeValue, tree, node, addNode);
+				return TraverseContextValues<T, N>(value.CompositeValue, tree, node, addNode, true);
 			case GlueValueType_Int:
 			case GlueValueType_Long:
 			case GlueValueType_DateTime:
@@ -254,7 +255,7 @@ namespace GlueCOM
 				}
 				break;
 			case GlueValueType_Composite:
-				return TraverseContextValues<T, N>(value.CompositeValue, tree, node, addNode);
+				return TraverseContextValues<T, N>(value.CompositeValue, tree, node, addNode, true);
 			case GlueValueType_DateTime:
 				if (addNode != nullptr)
 				{

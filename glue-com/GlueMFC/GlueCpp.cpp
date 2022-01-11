@@ -25,8 +25,6 @@ namespace GlueCOM
 		return S_FALSE;
 	}
 
-
-
 	IRecordInfo* ri_glue_instance;
 	IRecordInfo* ri_glue_context_value;
 	IRecordInfo* ri_glue_value;
@@ -60,7 +58,7 @@ namespace GlueCOM
 			}
 			break;
 			case GlueValueType_Composite:
-				return DestroyContextValuesSA(value.CompositeValue);
+				return DestroyContextValuesSA(value.CompositeValue, true);
 			case GlueValueType_Int:
 			case GlueValueType_Long:
 			case GlueValueType_DateTime:
@@ -109,7 +107,7 @@ namespace GlueCOM
 				SysFreeString(value.StringValue);
 				break;
 			case GlueValueType_Composite:
-				return DestroyContextValuesSA(value.CompositeValue);
+				return DestroyContextValuesSA(value.CompositeValue, true);
 			default:
 				break;
 			}
@@ -118,50 +116,46 @@ namespace GlueCOM
 		return S_OK;		
 	}
 
-	HRESULT DestroyContextValuesSA(SAFEARRAY* sa)
+	HRESULT DestroyContextValuesSA(SAFEARRAY* sa, bool is_variant_array)
 	{
 		void* pVoid;
-		HRESULT hr = SafeArrayAccessData(sa, &pVoid);
-		throw_if_fail(hr);
+		throw_if_fail(SafeArrayAccessData(sa, &pVoid));
 
-		if (SUCCEEDED(hr))
+		long lowerBound, upperBound; // get array bounds
+		SafeArrayGetLBound(sa, 1, &lowerBound);
+		SafeArrayGetUBound(sa, 1, &upperBound);
+
+		// it's either array of GlueContextValue
+		const GlueContextValue* cvs = static_cast<GlueContextValue*>(pVoid);
+
+		// or Variant array with each item as GlueContextValue
+		const VARIANT* inners = static_cast<VARIANT*>(pVoid);
+
+		long cnt_elements = upperBound - lowerBound + 1;
+		for (int i = 0; i < cnt_elements; ++i) // iterate through returned values
 		{
-			long lowerBound, upperBound; // get array bounds
-			SafeArrayGetLBound(sa, 1, &lowerBound);
-			SafeArrayGetUBound(sa, 1, &upperBound);
-
-			// it's either array of GlueContextValue
-			const GlueContextValue* cvs = static_cast<GlueContextValue*>(pVoid);
-
-			// or Variant array with each item as GlueContextValue
-			const VARIANT* inners = static_cast<VARIANT*>(pVoid);
-
-			long cnt_elements = upperBound - lowerBound + 1;
-			for (int i = 0; i < cnt_elements; ++i) // iterate through returned values
+			if (is_variant_array)
 			{
 				VARIANT vv = inners[i];
-				std::cout << vv.vt << endl;
-				if (vv.vt == VT_RECORD)
-				{
-					GlueContextValue* inner = static_cast<GlueContextValue*>(vv.pvRecord);
+				assert(vv.vt == VT_RECORD);
+				GlueContextValue* inner = static_cast<GlueContextValue*>(vv.pvRecord);
 
-					SysFreeString(inner->Name);
-					DestroyValue(inner->Value);
-					continue;
-				}
-
-				GlueContextValue gcv = cvs[i];
-
-				SysFreeString(gcv.Name);
-
-				DestroyValue(gcv.Value);
+				SysFreeString(inner->Name);
+				DestroyValue(inner->Value);
+				continue;
 			}
+
+			GlueContextValue gcv = cvs[i];
+
+			SysFreeString(gcv.Name);
+
+			DestroyValue(gcv.Value);
 		}
 
 		SafeArrayUnaccessData(sa);
 		SafeArrayDestroy(sa);
 
-		return hr;
+		return S_OK;
 	}
 
 	HRESULT ExtractGlueRecordInfos()
