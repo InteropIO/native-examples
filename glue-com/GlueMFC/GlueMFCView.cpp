@@ -231,9 +231,9 @@ void CGlueMFCView::OnSetGlueContextClicked()
 		// note that you have to pass valid json here
 		//context->UpdateContextDataJson("data.setMeHere.inner", "{parent: {child: {age: 5, name:\"Jay\"}}}");
 
-		int len = 55;
+		int len = 100;
 		GlueCOM::GlueContextValue* gvs = new GlueCOM::GlueContextValue[len];
-
+		
 		for (int ix = 0; ix < len; ++ix)
 		{
 			gvs[ix] = {};
@@ -244,12 +244,12 @@ void CGlueMFCView::OnSetGlueContextClicked()
 			gvs[ix].Name = _com_util::ConvertStringToBSTR(str.str().c_str());
 			// default everything
 			gvs[ix].Value = {};
-			if (ix % 2 == 0)
+			if (ix % 4 == 0)
 			{
 				gvs[ix].Value.GlueType = GlueCOM::GlueValueType::GlueValueType_String;
 				gvs[ix].Value.StringValue = _com_util::ConvertStringToBSTR("string value");
 			}
-			else
+			else if (ix % 3 == 0)
 			{
 				gvs[ix].Value.GlueType = GlueValueType_Double;
 				gvs[ix].Value.IsArray = true;
@@ -260,14 +260,30 @@ void CGlueMFCView::OnSetGlueContextClicked()
 				bounds[0].cElements = std::size(dbl_arr);
 
 				auto dbl_sa = SafeArrayCreate(VT_R8, 1, bounds);
-				double* d = dbl_arr;
 				for (long dbl_ix = 0; dbl_ix < bounds[0].cElements; ++dbl_ix)
 				{
-					//void* d = &dbl_arr[dbl_ix];
-					throw_if_fail(SafeArrayPutElement(dbl_sa, &dbl_ix, d++));
+					throw_if_fail(SafeArrayPutElement(dbl_sa, &dbl_ix, &dbl_arr[dbl_ix]));
 				}
 				
 				gvs[ix].Value.DoubleArray = dbl_sa;
+			}
+			else
+			{
+				gvs[ix].Value.GlueType = GlueValueType_Int;
+				gvs[ix].Value.IsArray = true;
+
+				SAFEARRAYBOUND bounds[1];
+				bounds[0].lLbound = 0;
+				long long ll_arr[5] = { 552 * ix, 744 * ix, 1203 * ix, 9348 * ix, 2939 * ix };
+				bounds[0].cElements = std::size(ll_arr);
+
+				auto lng_sa = SafeArrayCreate(VT_I8, 1, bounds);
+				for (long l_ix = 0; l_ix < bounds[0].cElements; ++l_ix)
+				{
+					throw_if_fail(SafeArrayPutElement(lng_sa, &l_ix, &ll_arr[l_ix]));
+				}
+
+				gvs[ix].Value.LongArray = lng_sa;
 			}
 		}
 
@@ -275,6 +291,10 @@ void CGlueMFCView::OnSetGlueContextClicked()
 
 		context->SetContextDataOnFieldPath("data.outer.something.in.here", sa);
 
-		DestroyContextValuesSA(sa);
+		// destroy the safe array
+		throw_if_fail(SafeArrayDestroy(sa));
+
+		// destroy the memory reserved by the main array
+		delete[] gvs;
 	}
 }

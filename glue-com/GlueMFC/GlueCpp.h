@@ -139,6 +139,10 @@ namespace GlueCOM
 				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					os << pLongs[i];
+					if (i < saValues->rgsabound[0].cElements - 1)
+					{
+						os << ", ";
+					}
 				}
 
 				if (addNode != nullptr)
@@ -159,6 +163,10 @@ namespace GlueCOM
 				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					os << pFloats[i];
+					if (i < saValues->rgsabound[0].cElements - 1)
+					{
+						os << ", ";
+					}
 				}
 
 				if (addNode != nullptr)
@@ -182,6 +190,10 @@ namespace GlueCOM
 				{
 					char* str = _com_util::ConvertBSTRToString(pStrings[i]);
 					os << str;
+					if (i < saValues->rgsabound[0].cElements - 1)
+					{
+						os << ", ";
+					}
 
 					delete[] str;
 				}
@@ -205,6 +217,10 @@ namespace GlueCOM
 				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					os << pBools[i];
+					if (i < saValues->rgsabound[0].cElements - 1)
+					{
+						os << ", ";
+					}
 				}
 
 				if (addNode != nullptr)

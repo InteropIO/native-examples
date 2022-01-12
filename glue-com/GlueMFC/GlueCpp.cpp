@@ -152,6 +152,7 @@ namespace GlueCOM
 		}
 
 		throw_if_fail(SafeArrayUnaccessData(sa));
+		SafeArrayReleaseData(sa->pvData);
 		throw_if_fail(SafeArrayDestroyDescriptor(sa));
 
 		return S_OK;
