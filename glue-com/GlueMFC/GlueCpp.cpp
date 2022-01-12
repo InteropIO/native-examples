@@ -47,7 +47,7 @@ namespace GlueCOM
 				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
 				const VARIANT* pTuple = static_cast<VARIANT*>(pVoid);
 
-				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					GlueValue* inner = static_cast<GlueValue*>(pTuple[i].pvRecord);
 					DestroyValue(*inner);
@@ -82,7 +82,7 @@ namespace GlueCOM
 
 				const BSTR* pStrings = static_cast<BSTR*>(pVoid);
 
-				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					SysFreeString(pStrings[i]);
 				}				

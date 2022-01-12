@@ -13,7 +13,7 @@
 	high_property_prefixes("_get","_put","_putref")\
 	auto_rename
 
-#import "C:\Users\CHANGE_ME\AppData\Local\Tick42\GlueSDK\GlueCOMv2\GlueCOM.dll"\
+#import "C:\work\tick42\stash\dot-net-glue-com\GlueCom\bin\Debug\GlueCOM.dll"\
 	named_guids\
 	high_property_prefixes("_get","_put","_putref")	
 
@@ -114,7 +114,7 @@ namespace GlueCOM
 				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
 				const VARIANT* pTuple = static_cast<VARIANT*>(pVoid);
 
-				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					GlueValue* inner = static_cast<GlueValue*>(pTuple[i].pvRecord);
 					TraverseValue<T, N>(*inner, tree, node, addNode);
@@ -136,7 +136,7 @@ namespace GlueCOM
 
 				const __int64* pLongs = static_cast<__int64*>(pVoid);
 
-				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					os << pLongs[i];
 					if (i < saValues->rgsabound[0].cElements - 1)
@@ -160,7 +160,7 @@ namespace GlueCOM
 				throw_if_fail(SafeArrayAccessData(saValues, &pVoid));
 
 				const double* pFloats = static_cast<double*>(pVoid);
-				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					os << pFloats[i];
 					if (i < saValues->rgsabound[0].cElements - 1)
@@ -186,7 +186,7 @@ namespace GlueCOM
 
 				const BSTR* pStrings = static_cast<BSTR*>(pVoid);
 
-				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					char* str = _com_util::ConvertBSTRToString(pStrings[i]);
 					os << str;
@@ -214,7 +214,7 @@ namespace GlueCOM
 
 				const bool* pBools = static_cast<bool*>(pVoid);
 
-				for (int i = 0; i < saValues->rgsabound[0].cElements; ++i)
+				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					os << pBools[i];
 					if (i < saValues->rgsabound[0].cElements - 1)

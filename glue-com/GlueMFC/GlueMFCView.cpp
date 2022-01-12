@@ -145,8 +145,14 @@ void CGlueMFCView::RegisterGlueWindow(CWnd* wnd, bool main)
 	settings->Title = "Something-something-dark-side";
 	settings->StandardButtons = "LockUnlock, Extract, Collapse, Minimize, Maximize, Close";
 
-	m_cGlueWindow = main ? theGlue->RegisterStartupGlueWindowWithSettings(reinterpret_cast<long>(wnd->m_hWnd), settings, this) :
-		theGlue->RegisterGlueWindowWithSettings(reinterpret_cast<long>(wnd->m_hWnd), settings, this);
+#pragma warning( push )
+#pragma warning( disable : 4302 )
+#pragma warning( disable : 4311 )
+	const long hwnd = reinterpret_cast<long>(wnd->m_hWnd);
+#pragma warning( pop )
+
+	m_cGlueWindow = main ? theGlue->RegisterStartupGlueWindowWithSettings(hwnd, settings, this) :
+		                theGlue->RegisterGlueWindowWithSettings(hwnd, settings, this);
 	settings->Release();
 }
 
@@ -231,6 +237,10 @@ void CGlueMFCView::OnSetGlueContextClicked()
 		// note that you have to pass valid json here
 		//context->UpdateContextDataJson("data.setMeHere.inner", "{parent: {child: {age: 5, name:\"Jay\"}}}");
 
+#pragma warning( push )
+#pragma warning( disable : 4267 )
+#pragma warning( disable : 4018 )
+
 		int len = 100;
 		GlueCOM::GlueContextValue* gvs = new GlueCOM::GlueContextValue[len];
 		
@@ -257,6 +267,7 @@ void CGlueMFCView::OnSetGlueContextClicked()
 				SAFEARRAYBOUND bounds[1];
 				bounds[0].lLbound = 0;
 				double dbl_arr[5] = { 3.14 + ix, 5.1 + ix, 6.7 + ix, 8.1 + ix, 9.2 + ix };
+
 				bounds[0].cElements = std::size(dbl_arr);
 
 				auto dbl_sa = SafeArrayCreate(VT_R8, 1, bounds);
@@ -264,7 +275,7 @@ void CGlueMFCView::OnSetGlueContextClicked()
 				{
 					throw_if_fail(SafeArrayPutElement(dbl_sa, &dbl_ix, &dbl_arr[dbl_ix]));
 				}
-				
+
 				gvs[ix].Value.DoubleArray = dbl_sa;
 			}
 			else
@@ -286,6 +297,7 @@ void CGlueMFCView::OnSetGlueContextClicked()
 				gvs[ix].Value.LongArray = lng_sa;
 			}
 		}
+#pragma warning( pop )
 
 		auto sa = CreateGlueContextValuesSafeArray(gvs, len);
 
