@@ -252,7 +252,7 @@ void CGlueMFCView::OnSetGlueContextClicked()
 #pragma warning( disable : 4018 )
 
 		int len = 100;
-		GlueCOM::GlueContextValue* gvs = new GlueCOM::GlueContextValue[len];
+		auto gvs = std::make_unique<GlueContextValue[]>(len);
 		
 		for (int ix = 0; ix < len; ++ix)
 		{
@@ -269,10 +269,12 @@ void CGlueMFCView::OnSetGlueContextClicked()
 				// build a composite
 				gvs[ix].Value.GlueType = GlueValueType_Composite;
 
-				// use static array in the demo
+				// use smart pointer (or a static array if smart pointers cannot be used)
+				constexpr int composite_len = 10;
+				auto composite = std::make_unique<GlueContextValue[]>(composite_len);
+				
 				// if this is dynamically created - it needs to be freed after!
-				GlueContextValue composite[10];
-				for (int cmp_ix = 0; cmp_ix < std::size(composite); ++cmp_ix)
+				for (int cmp_ix = 0; cmp_ix < composite_len; ++cmp_ix)
 				{
 					composite[cmp_ix] = {};
 					composite[cmp_ix].Value = {};
@@ -296,7 +298,7 @@ void CGlueMFCView::OnSetGlueContextClicked()
 					composite[cmp_ix].Name = _com_util::ConvertStringToBSTR(field_name.str().c_str());
 				}
 
-				gvs[ix].Value.CompositeValue = CreateContextValuesVARIANTSafeArray(composite, std::size(composite));
+				gvs[ix].Value.CompositeValue = CreateContextValuesVARIANTSafeArray(composite.get(), composite_len);
 			}
 			else if (ix % 4 == 0)
 			{
@@ -343,14 +345,13 @@ void CGlueMFCView::OnSetGlueContextClicked()
 		}
 #pragma warning( pop )
 
-		auto sa = CreateGlueContextValuesSafeArray(gvs, len);
+		auto sa = CreateGlueContextValuesSafeArray(gvs.get(), len);
 
 		context->SetContextDataOnFieldPath("data.outer.something.in.here", sa);
 
 		// destroy the safe array
 		throw_if_fail(SafeArrayDestroy(sa));
 
-		// destroy the memory reserved by the main array
-		delete[] gvs;
+		// the memory reserved by the main array will be destroyed as it's in a smart pointer
 	}
 }
