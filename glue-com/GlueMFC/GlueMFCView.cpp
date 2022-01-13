@@ -89,14 +89,24 @@ HTREEITEM AddItem(CGlueMFCView *owner, HTREEITEM *node, const char *data, bool l
 		if (leaf)
 		{
 			CString str;
-			str.Format(TEXT("%s = %hs"), tree->GetItemText(*node), data);
+
+			const CString item_text = tree->GetItemText(*node);
+
+			str.Format(TEXT("%s = %hs"), item_text, data);
+
+			str.Delete(0, 4);
 
 			tree->SetItemText(*node, str);
+			tree->SetItemState(*node, TVIS_BOLD, ~TVIS_BOLD);
+			
 			n = *node;
 		}
 		else
 		{
-			n = tree->InsertItem(CA2W(data), *node);
+			stringstream s;
+			s << "(+) " << data;
+			tree->SetItemState(*node, TVIS_BOLD, TVIS_BOLD);
+			n = tree->InsertItem(CA2W(s.str().c_str()), *node);
 		}
 	}
 	return n;
@@ -254,7 +264,41 @@ void CGlueMFCView::OnSetGlueContextClicked()
 			gvs[ix].Name = _com_util::ConvertStringToBSTR(str.str().c_str());
 			// default everything
 			gvs[ix].Value = {};
-			if (ix % 4 == 0)
+			if (ix % 5 == 0)
+			{
+				// build a composite
+				gvs[ix].Value.GlueType = GlueValueType_Composite;
+
+				// use static array in the demo
+				// if this is dynamically created - it needs to be freed after!
+				GlueContextValue composite[10];
+				for (int cmp_ix = 0; cmp_ix < std::size(composite); ++cmp_ix)
+				{
+					composite[cmp_ix] = {};
+					composite[cmp_ix].Value = {};
+					stringstream field_name;
+					if (cmp_ix % 2 == 0)
+					{
+						field_name << "dbl_field";
+						composite[cmp_ix].Value.GlueType = GlueValueType_Double;
+						composite[cmp_ix].Value.DoubleValue = 3.14 * (cmp_ix + 1.0);
+					}
+					else
+					{
+						field_name << "string_field";
+						composite[cmp_ix].Value.GlueType = GlueValueType_String;
+						composite[cmp_ix].Value.StringValue = _com_util::ConvertStringToBSTR("valval");
+					}
+
+					field_name << "_" << cmp_ix;
+
+					// the name of a composite need to be different
+					composite[cmp_ix].Name = _com_util::ConvertStringToBSTR(field_name.str().c_str());
+				}
+
+				gvs[ix].Value.CompositeValue = CreateContextValuesVARIANTSafeArray(composite, std::size(composite));
+			}
+			else if (ix % 4 == 0)
 			{
 				gvs[ix].Value.GlueType = GlueCOM::GlueValueType::GlueValueType_String;
 				gvs[ix].Value.StringValue = _com_util::ConvertStringToBSTR("string value");
