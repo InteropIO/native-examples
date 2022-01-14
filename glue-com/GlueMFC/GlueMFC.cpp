@@ -140,7 +140,7 @@ BOOL CGlueMFCApp::InitInstance()
 	// start glue
 	GlueInstance instance = {};
 	instance.ApplicationName = _com_util::ConvertStringToBSTR("GlueMFC");
-	instance.UserName = _com_util::ConvertStringToBSTR("CHANGE_ME");
+	instance.UserName = _com_util::ConvertStringToBSTR("xaoc");
 	theGlue->Start(instance);
 
 	// register a child app

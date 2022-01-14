@@ -76,7 +76,7 @@ HRESULT __stdcall CGlueMFCView::raw_HandleWindowReady(
 	return S_OK;
 }
 
-HTREEITEM AddItem(CGlueMFCView* owner, HTREEITEM* node, const char* data, const bool leaf, const GlueValue* value, const GlueContextValue* gcv)
+HTREEITEM AddItem(CGlueMFCView* owner, HTREEITEM* node, const char* data, const bool leaf, const GlueValue& value, const GlueContextValue* gcv)
 {
 	HTREEITEM n;
 	CTreeCtrl* tree = owner->GetTree();
@@ -90,7 +90,48 @@ HTREEITEM AddItem(CGlueMFCView* owner, HTREEITEM* node, const char* data, const 
 		{
 			CString str;
 
-			str.Format(TEXT("%s [%hs] = %hs"), gcv->Name, glue_type_to_string(value->GlueType), data);
+			str.Format(TEXT("%s [%hs] = %hs"), gcv->Name, glue_type_to_string(value.GlueType), data);
+
+			if (value.GlueType == GlueValueType_Int && value.IsArray)
+			{
+			} else if (value.GlueType == GlueValueType_String && value.IsArray)
+			{
+				vector<string> v;
+				get_glue_strings(value, v);
+			}
+			if (value.IsArray)
+			{
+				switch (value.GlueType)
+				{
+				case GlueValueType_Bool:
+				{
+					vector<bool> v;
+					get_glue_bools(value, v);
+					break;
+				}
+				case GlueValueType_Int:
+				case GlueValueType_Long:
+				case GlueValueType_DateTime:
+				{
+					vector<long long> v;
+					get_glue_longs(value, v);
+					break;
+				}
+				case GlueValueType_String:
+				{
+					vector<string> v;
+					get_glue_strings(value, v);
+					break;
+				}
+				case GlueValueType_Double: 
+				{
+					vector<double> v;
+					get_glue_doubles(value, v);
+					break;
+				}
+				default:;
+				}
+			}
 
 			tree->SetItemText(*node, str);
 			tree->SetItemState(*node, TVIS_BOLD, ~TVIS_BOLD);
@@ -99,8 +140,18 @@ HTREEITEM AddItem(CGlueMFCView* owner, HTREEITEM* node, const char* data, const 
 		}
 		else
 		{
+			if (value.GlueType == GlueValueType_Tuple)
+			{
+				vector<GlueValue> v;
+				get_glue_tuple(value, v);
+			} else if (value.GlueType == GlueValueType_Composite)
+			{
+				vector<tuple<string, GlueValue>> v;
+				get_glue_composite(value, v);
+			}
+
 			stringstream s;
-			s << "(+) " << data << "[" << glue_type_to_string(value->GlueType) << "]";
+			s << "(+) " << data << "[" << glue_type_to_string(value.GlueType) << "]";
 			tree->SetItemState(*node, TVIS_BOLD, TVIS_BOLD);
 			n = tree->InsertItem(CA2W(s.str().c_str()), *node);
 		}
