@@ -168,7 +168,10 @@ HRESULT CGlueMFCView::PopulateContext(IGlueContext* context)
 	auto data = context->GetData();
 	m_tree.DeleteAllItems();
 	auto parent = m_tree.InsertItem(context->GetContextInfo().Name, 0, 0, TVI_ROOT);
-	
+
+	vector<tuple<string, GlueValue>> v;
+	get_glue_top_composite(context->GetData(), v);
+
 	TraverseContextValues<CGlueMFCView, HTREEITEM>(data, this, &parent, &AddItem);
 
 	m_tree.Invalidate();

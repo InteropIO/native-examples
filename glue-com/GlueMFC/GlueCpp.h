@@ -137,6 +137,31 @@ namespace GlueCOM
 		SafeArrayUnaccessData(sa);
 	}
 
+	inline void get_glue_top_composite(SAFEARRAY* sa, vector<tuple<string, GlueValue>>& v)
+	{
+		if (sa == nullptr)
+		{
+			return;
+		}
+
+		void* pVoid;
+		throw_if_fail(SafeArrayAccessData(sa, &pVoid));
+
+		const GlueContextValue* cvs = static_cast<GlueContextValue*>(pVoid);
+
+		for (ULONG i = 0; i < sa->rgsabound[0].cElements; ++i)
+		{
+			GlueContextValue vv = cvs[i];
+			auto pchr = _com_util::ConvertBSTRToString(vv.Name);
+			string name(pchr);
+			delete[] pchr;
+
+			v.emplace_back(std::make_tuple(name, vv.Value));
+		}
+
+		SafeArrayUnaccessData(sa);
+	}
+
 	template<typename T>
 	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
 	extern HRESULT DestroyValue(const GlueValue& value);
