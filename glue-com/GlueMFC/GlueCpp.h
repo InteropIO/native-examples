@@ -30,6 +30,22 @@ namespace GlueCOM
 		}
 	}
 
+	inline const char* glue_type_to_string(GlueValueType gvt)
+	{
+		switch (gvt)
+		{
+		case GlueValueType_Bool: return "Bool";
+		case GlueValueType_Int: return "Int";
+		case GlueValueType_Double: return "Double";
+		case GlueValueType_Long: return "Long";
+		case GlueValueType_String: return "String";
+		case GlueValueType_DateTime: return "DateTime";
+		case GlueValueType_Tuple: return "Tuple";
+		case GlueValueType_Composite: return "Composite";
+		default: return "[Unknown GlueValueType]";
+		}
+	}
+
 	template<typename T>
 	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
 	extern HRESULT DestroyValue(const GlueValue& value);
@@ -38,7 +54,7 @@ namespace GlueCOM
 	extern HRESULT ExtractGlueRecordInfos();
 
 	template <typename T, typename N>
-	HRESULT TraverseContextValues(SAFEARRAY* sa, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr, bool is_variant_array = false)
+	HRESULT TraverseContextValues(SAFEARRAY* sa, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool, const GlueValue*, const GlueContextValue*) = nullptr, bool is_variant_array = false)
 	{
 		void* pVoid;
 		HRESULT hr = SafeArrayAccessData(sa, &pVoid);
@@ -70,11 +86,11 @@ namespace GlueCOM
 					if (addNode != nullptr)
 					{
 						char* name = _com_util::ConvertBSTRToString(inner->Name);
-						nn = addNode(tree, node, name, false);
+						nn = addNode(tree, node, name, false, &inner->Value, inner);
 						delete[] name;
 					}
 
-					TraverseValue<T, N>(inner->Value, tree, &nn, addNode);
+					TraverseValue<T, N>(inner->Value, inner, tree, &nn, addNode);
 					continue;
 				}
 
@@ -82,10 +98,10 @@ namespace GlueCOM
 				if (addNode != nullptr)
 				{
 					char* name = _com_util::ConvertBSTRToString(gcv.Name);
-					nn = addNode(tree, node, name, false);
+					nn = addNode(tree, node, name, false, &gcv.Value, &gcv);
 					delete[] name;
 				}
-				TraverseValue<T, N>(gcv.Value, tree, &nn, addNode);
+				TraverseValue<T, N>(gcv.Value, &gcv, tree, &nn, addNode);
 			}
 		}
 
@@ -95,7 +111,7 @@ namespace GlueCOM
 	}
 
 	template <typename T, typename N>
-	extern HRESULT TraverseValue(GlueValue value, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool) = nullptr)
+	extern HRESULT TraverseValue(GlueValue value, GlueContextValue* parent = nullptr, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool, const GlueValue*, const GlueContextValue*) = nullptr)
 	{
 		if (value.IsArray)
 		{
@@ -117,7 +133,7 @@ namespace GlueCOM
 				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					GlueValue* inner = static_cast<GlueValue*>(pTuple[i].pvRecord);
-					TraverseValue<T, N>(*inner, tree, node, addNode);
+					TraverseValue<T, N>(*inner, parent, tree, node, addNode);
 				}
 
 				SafeArrayUnaccessData(saValues);
@@ -147,7 +163,7 @@ namespace GlueCOM
 
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, os.str().c_str(), true);
+					addNode(tree, node, os.str().c_str(), true, &value, parent);
 				}
 
 				SafeArrayUnaccessData(saValues);
@@ -171,7 +187,7 @@ namespace GlueCOM
 
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, os.str().c_str(), true);
+					addNode(tree, node, os.str().c_str(), true, &value, parent);
 				}
 
 				SafeArrayUnaccessData(saValues);
@@ -200,7 +216,7 @@ namespace GlueCOM
 
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, os.str().c_str(), true);
+					addNode(tree, node, os.str().c_str(), true, &value, parent);
 				}
 
 				SafeArrayUnaccessData(saValues);
@@ -225,7 +241,7 @@ namespace GlueCOM
 
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, os.str().c_str(), true);
+					addNode(tree, node, os.str().c_str(), true, &value, parent);
 				}
 
 				SafeArrayUnaccessData(saValues);
@@ -240,14 +256,14 @@ namespace GlueCOM
 			case GlueValueType_Double:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.DoubleValue)[0], true);
+					addNode(tree, node, &to_string(value.DoubleValue)[0], true, &value, parent);
 				}
 				break;
 			case GlueValueType_String:
 				if (addNode != nullptr)
 				{
 					const auto str = _com_util::ConvertBSTRToString(value.StringValue);
-					addNode(tree, node, str, true);
+					addNode(tree, node, str, true, &value, parent);
 					delete[] str;
 				}
 
@@ -255,19 +271,19 @@ namespace GlueCOM
 			case GlueValueType_Int:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.LongValue)[0], true);
+					addNode(tree, node, &to_string(value.LongValue)[0], true, &value, parent);
 				}
 				break;
 			case GlueValueType_Bool:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.BoolValue)[0], true);
+					addNode(tree, node, &to_string(value.BoolValue)[0], true, &value, parent);
 				}
 				break;
 			case GlueValueType_Long:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.LongValue)[0], true);
+					addNode(tree, node, &to_string(value.LongValue)[0], true, &value, parent);
 				}
 				break;
 			case GlueValueType_Composite:
@@ -275,7 +291,7 @@ namespace GlueCOM
 			case GlueValueType_DateTime:
 				if (addNode != nullptr)
 				{
-					addNode(tree, node, &to_string(value.LongValue)[0], true);
+					addNode(tree, node, &to_string(value.LongValue)[0], true, &value, parent);
 				}
 				break;
 			case GlueValueType_Tuple:

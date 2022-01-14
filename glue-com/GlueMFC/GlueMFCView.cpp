@@ -76,7 +76,7 @@ HRESULT __stdcall CGlueMFCView::raw_HandleWindowReady(
 	return S_OK;
 }
 
-HTREEITEM AddItem(CGlueMFCView *owner, HTREEITEM *node, const char *data, bool leaf)
+HTREEITEM AddItem(CGlueMFCView* owner, HTREEITEM* node, const char* data, const bool leaf, const GlueValue* value, const GlueContextValue* gcv)
 {
 	HTREEITEM n;
 	CTreeCtrl* tree = owner->GetTree();
@@ -90,21 +90,17 @@ HTREEITEM AddItem(CGlueMFCView *owner, HTREEITEM *node, const char *data, bool l
 		{
 			CString str;
 
-			const CString item_text = tree->GetItemText(*node);
-
-			str.Format(TEXT("%s = %hs"), item_text, data);
-
-			str.Delete(0, 4);
+			str.Format(TEXT("%s [%hs] = %hs"), gcv->Name, glue_type_to_string(value->GlueType), data);
 
 			tree->SetItemText(*node, str);
 			tree->SetItemState(*node, TVIS_BOLD, ~TVIS_BOLD);
-			
+
 			n = *node;
 		}
 		else
 		{
 			stringstream s;
-			s << "(+) " << data;
+			s << "(+) " << data << "[" << glue_type_to_string(value->GlueType) << "]";
 			tree->SetItemState(*node, TVIS_BOLD, TVIS_BOLD);
 			n = tree->InsertItem(CA2W(s.str().c_str()), *node);
 		}
