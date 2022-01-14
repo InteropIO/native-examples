@@ -92,13 +92,6 @@ HTREEITEM AddItem(CGlueMFCView* owner, HTREEITEM* node, const char* data, const 
 
 			str.Format(TEXT("%s [%hs] = %hs"), gcv->Name, glue_type_to_string(value.GlueType), data);
 
-			if (value.GlueType == GlueValueType_Int && value.IsArray)
-			{
-			} else if (value.GlueType == GlueValueType_String && value.IsArray)
-			{
-				vector<string> v;
-				get_glue_strings(value, v);
-			}
 			if (value.IsArray)
 			{
 				switch (value.GlueType)
