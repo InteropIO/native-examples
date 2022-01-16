@@ -7,6 +7,8 @@
 	#error "include 'pch.h' before including this file for PCH"
 #endif
 
+#include <map>
+
 #include "resource.h"       // main symbols
 
 
@@ -22,6 +24,7 @@ public:
 protected:
 	CMultiDocTemplate* m_pDocTemplate{};
 public:
+
 	HRESULT __stdcall raw_CreateApp(
 		/*[in]*/ BSTR appDefName,
 		/*[in]*/ struct GlueValue state,
@@ -59,15 +62,19 @@ public:
 
 private:
 	ULONG m_cRef = 0;
-	
+	std::map<HWND, IAppAnnouncer*>* m_announcers_;
+
 // Overrides
 public:
 	virtual BOOL InitInstance();
 	virtual int ExitInstance();
 
+	IAppAnnouncer* get_announcer(HWND hwnd) const;
+
 // Implementation
 	UINT  m_nAppLook{};
 	afx_msg void OnAppAbout();
+	void create_new_frame(IAppAnnouncer* announcer = nullptr) const;
 	afx_msg void OnFileNewFrame();
 	afx_msg void OnFileNew();
 	DECLARE_MESSAGE_MAP()

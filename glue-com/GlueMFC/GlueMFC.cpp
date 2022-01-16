@@ -6,6 +6,9 @@
 #include "afxwinappex.h"
 #include "afxdialogex.h"
 #include "GlueMFC.h"
+
+#include <map>
+
 #include "MainFrm.h"
 
 #include "GlueMFCDoc.h"
@@ -53,6 +56,8 @@ CGlueMFCApp::CGlueMFCApp() noexcept
 	// TODO: add construction code here,
 	// Place all significant initialization in InitInstance
 
+	m_announcers_ = new std::map<HWND, IAppAnnouncer*>;
+
 	hr = CoCreateInstance(CLSID_Glue42, nullptr, CLSCTX_INPROC_SERVER, IID_IGlue42, reinterpret_cast<void**>(&theGlue));
 	throw_if_fail(hr);
 	throw_if_fail(ExtractGlueRecordInfos());
@@ -60,8 +65,7 @@ CGlueMFCApp::CGlueMFCApp() noexcept
 
 HRESULT CGlueMFCApp::raw_CreateApp(BSTR appDefName, GlueValue state, IAppAnnouncer* announcer)
 {
-	// todo: create and announce child
-	OnFileNewFrame();
+	create_new_frame(announcer);
 	return S_OK;
 }
 
@@ -139,23 +143,35 @@ BOOL CGlueMFCApp::InitInstance()
 
 	// start glue
 	GlueInstance instance = {};
-	instance.ApplicationName = _com_util::ConvertStringToBSTR("GlueMFC");
-	instance.UserName = _com_util::ConvertStringToBSTR("xaoc");
+	const auto app = _com_util::ConvertStringToBSTR("GlueMFC");
+	instance.ApplicationName = app;
+	const auto user = _com_util::ConvertStringToBSTR("CHANGE_ME");
+	instance.UserName = user;
 	theGlue->Start(instance);
+
+	SysFreeString(app);
+	SysFreeString(user);
 
 	// register a child app
 	GlueAppDefinition mfcDef;
-	mfcDef.Name = _com_util::ConvertStringToBSTR("MFCChild");
-	mfcDef.Title = _com_util::ConvertStringToBSTR("MFC Child");
-	mfcDef.Category = _com_util::ConvertStringToBSTR("MFC");
+	const auto name = _com_util::ConvertStringToBSTR("MFCChild");
+	mfcDef.Name = name;
+	const auto title = _com_util::ConvertStringToBSTR("MFC Child");
+	mfcDef.Title = title;
+	const auto category = _com_util::ConvertStringToBSTR("MFC");
+	mfcDef.Category = category;
 
 	theGlue->AppFactoryRegistry->RegisterAppFactory(mfcDef, this);
+
+	SysFreeString(name);
+	SysFreeString(title);
+	SysFreeString(category);
 
 	// The one and only window has been initialized, so show and update it
 	m_pMainWnd->ShowWindow(SW_SHOW);
 	m_pMainWnd->UpdateWindow();
 
-	auto view = dynamic_cast<CGlueMFCView*>(dynamic_cast<CMainFrame*>(m_pMainWnd)->GetActiveView());
+	const auto view = dynamic_cast<CGlueMFCView*>(dynamic_cast<CMainFrame*>(m_pMainWnd)->GetActiveView());
 	view->RegisterGlueWindow(m_pMainWnd, true);
 
 	return TRUE;
@@ -167,6 +183,21 @@ int CGlueMFCApp::ExitInstance()
 	AfxOleTerm(FALSE);
 
 	return CWinApp::ExitInstance();
+}
+
+IAppAnnouncer* CGlueMFCApp::get_announcer(HWND hwnd) const
+{
+	const auto it = this->m_announcers_->find(hwnd);
+	if (it == this->m_announcers_->end())
+	{
+		return nullptr;
+	}
+	IAppAnnouncer* app_announcer = it->second;
+	if (app_announcer != nullptr)
+	{
+		this->m_announcers_->erase(hwnd);
+	}
+	return app_announcer;
 }
 
 // CGlueMFCApp message handlers
@@ -213,7 +244,7 @@ void CGlueMFCApp::OnAppAbout()
 
 // CGlueMFCApp message handlers
 
-void CGlueMFCApp::OnFileNewFrame()
+void CGlueMFCApp::create_new_frame(IAppAnnouncer* announcer) const
 {
 	ASSERT(m_pDocTemplate != nullptr);
 
@@ -235,6 +266,11 @@ void CGlueMFCApp::OnFileNewFrame()
 			// Set the title, and initialize the document.
 			// If document initialization fails, clean-up
 			// the frame window and document.
+
+			if (announcer != nullptr)
+			{
+				m_announcers_->emplace(std::make_pair(pFrame->m_hWnd, announcer));
+			}
 
 			m_pDocTemplate->SetDefaultTitle(pDoc);
 			if (!pDoc->OnNewDocument())
@@ -258,6 +294,11 @@ void CGlueMFCApp::OnFileNewFrame()
 		delete pDoc;
 		AfxMessageBox(AFX_IDP_FAILED_TO_CREATE_DOC);
 	}
+}
+
+void CGlueMFCApp::OnFileNewFrame()
+{
+	create_new_frame();
 }
 
 void CGlueMFCApp::OnFileNew()

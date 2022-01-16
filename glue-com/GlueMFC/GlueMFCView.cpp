@@ -61,8 +61,24 @@ void CGlueMFCView::OnActivateFrame(UINT nState, CFrameWnd* pFrameWnd)
 	const auto parentFrame = GetParentFrame();
 	if (nState == 1 && mainHwnd != parentFrame->m_hWnd && m_cGlueWindow == nullptr)
 	{
-		// register child window
-		RegisterGlueWindow(parentFrame);
+		registered_ = true;
+		auto hwnd = this->GetParentFrame()->m_hWnd;
+		IAppAnnouncer* announcer = theApp.get_announcer(hwnd);
+		if (announcer != nullptr)
+		{
+			registered_ = true;
+#pragma warning( push )
+#pragma warning( disable : 4302 )
+#pragma warning( disable : 4311 )
+			announcer->RegisterAppInstance(reinterpret_cast<long>(hwnd), this);
+#pragma warning( pop )
+		}
+		else
+		{
+			// register child window instance
+			RegisterGlueWindow(parentFrame);
+		}
+
 	}
 }
 
@@ -73,6 +89,22 @@ void CGlueMFCView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 HRESULT __stdcall CGlueMFCView::raw_HandleWindowReady(
 	/*[in]*/ struct IGlueWindow* GlueWindow)
 {
+	if (main_)
+	{
+		theGlue->AppFactoryRegistry->RegisterMainInstance(this);
+	}
+	else if (!registered_)
+	{
+		auto hwnd = this->GetParentFrame()->m_hWnd;
+		IAppAnnouncer* announcer = theApp.get_announcer(hwnd);
+		if (announcer == nullptr)
+		{
+			auto child_name = _com_util::ConvertStringToBSTR("MFC Child");
+			theGlue->AppFactoryRegistry->RegisterAppInstance(child_name, m_cGlueWindow, this);
+			SysFreeString(child_name);
+		}
+	}
+
 	return S_OK;
 }
 
@@ -190,6 +222,36 @@ HRESULT CGlueMFCView::raw_HandleWindowDestroyed(IGlueWindow* GlueWindow)
 	return S_OK;
 }
 
+HRESULT CGlueMFCView::raw_SaveState(IGlueValueReceiver* receiver)
+{
+	GlueValue v{};
+	v.GlueType = GlueValueType_String;
+	auto bstr = _com_util::ConvertStringToBSTR("hello");
+	v.StringValue = bstr;
+	receiver->SendGlueValue(v);
+	SysFreeString(bstr);
+	return S_OK;
+}
+
+HRESULT CGlueMFCView::raw_Initialize(GlueValue state, IGlueWindow* GlueWindow)
+{
+	if (state.GlueType == GlueValueType_String)
+	{
+		const char* state_str = _com_util::ConvertBSTRToString(state.StringValue);
+
+		// use state_str
+
+		delete[] state_str;
+	}
+	return S_OK;
+}
+
+HRESULT CGlueMFCView::raw_Shutdown()
+{
+	this->OnClose();
+	return S_OK;
+}
+
 void CGlueMFCView::RegisterGlueWindow(CWnd* wnd, bool main)
 {
 	auto settings = theGlue->CreateDefaultVBGlueWindowSettings();
@@ -206,6 +268,9 @@ void CGlueMFCView::RegisterGlueWindow(CWnd* wnd, bool main)
 
 	m_cGlueWindow = main ? theGlue->RegisterStartupGlueWindowWithSettings(hwnd, settings, this) :
 		                theGlue->RegisterGlueWindowWithSettings(hwnd, settings, this);
+
+	main_ = main;
+	
 	settings->Release();
 }
 
@@ -256,7 +321,8 @@ int CGlueMFCView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 
 	// TODO:  Add your specialized creation code here
-	const LPRECT r = new tagRECT;
+	auto tag_rect = tagRECT{};
+	const LPRECT r = &tag_rect;
 	this->GetWindowRect(r);
 
 	m_button.Create(_T("Set Glue Context"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,

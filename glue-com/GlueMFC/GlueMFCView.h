@@ -4,7 +4,7 @@
 
 #pragma once
 
-class CGlueMFCView : public CView, IGlueWindowEventHandler
+class CGlueMFCView : public CView, IGlueWindowEventHandler, IGlueApp
 {
 protected: // create from serialization only
 	CGlueMFCView() noexcept;
@@ -46,8 +46,10 @@ public:
 
 protected:
 	IGlueWindow* m_cGlueWindow = nullptr;
+	bool main_;
+	bool registered_ = false;
 
-// Generated message map functions
+	// Generated message map functions
 protected:
 	DECLARE_MESSAGE_MAP()
 
@@ -68,11 +70,20 @@ public:
 		/*[in]*/ struct GlueContext prevChannel) override;
 	HRESULT __stdcall raw_HandleWindowDestroyed(
 		/*[in]*/ struct IGlueWindow* GlueWindow) override;
-	
+
+	HRESULT __stdcall raw_SaveState(
+		struct IGlueValueReceiver* receiver) override;
+	HRESULT __stdcall raw_Initialize(
+		/*[in]*/ struct GlueValue state,
+		/*[in]*/ struct IGlueWindow* GlueWindow) override;
+	HRESULT __stdcall raw_Shutdown()  override;
+
 	STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override
 	{
 		if (riid == IID_IGlueWindowEventHandler || riid == IID_IUnknown)
 			*ppv = static_cast<IGlueWindowEventHandler*>(this);
+		else if (riid == IID_IGlueApp)
+			*ppv = static_cast<IGlueApp*>(this);
 		else
 			*ppv = nullptr;
 
