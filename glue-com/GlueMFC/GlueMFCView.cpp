@@ -197,6 +197,11 @@ HRESULT CGlueMFCView::PopulateContext(IGlueContext* context)
 	//_bstr_t first_name_as_json = context->GetDataAsJson("data.contact.name.firstName"); // if the value is a leaf you will get it as json value - {"John"}
 	//_bstr_t composite_name_as_json = context->GetDataAsJson("data.contact.name"); // you will get the composite as a nice json encoded string
 
+	if (context == nullptr)
+	{
+		return S_OK;
+	}
+
 	auto data = context->GetData();
 	m_tree.DeleteAllItems();
 	auto parent = m_tree.InsertItem(context->GetContextInfo().Name, 0, 0, TVI_ROOT);
@@ -214,6 +219,10 @@ HRESULT CGlueMFCView::PopulateContext(IGlueContext* context)
 
 HRESULT CGlueMFCView::raw_HandleChannelChanged(IGlueWindow* GlueWindow, IGlueContext* Channel, GlueContext prevChannel)
 {
+	if (Channel == nullptr)
+	{
+		// handle channel deselected
+	}
 	return PopulateContext(Channel);
 }
 
