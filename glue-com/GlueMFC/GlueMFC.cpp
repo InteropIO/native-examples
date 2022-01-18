@@ -145,7 +145,14 @@ BOOL CGlueMFCApp::InitInstance()
 	GlueInstance instance = {};
 	const auto app = _com_util::ConvertStringToBSTR("GlueMFC");
 	instance.ApplicationName = app;
-	const auto user = _com_util::ConvertStringToBSTR("CHANGE_ME");
+
+	char* buffer = nullptr;
+	size_t size = 0;
+	_dupenv_s(&buffer, &size, "username");
+	const auto user = _com_util::ConvertStringToBSTR(buffer);
+	free(buffer);
+
+	// change the glue user, if required
 	instance.UserName = user;
 	theGlue->Start(instance);
 
