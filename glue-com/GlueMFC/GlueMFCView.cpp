@@ -382,7 +382,21 @@ void CGlueMFCView::OnSetGlueContextClicked()
 			gvs[ix].Name = _com_util::ConvertStringToBSTR(str.str().c_str());
 			// default everything
 			gvs[ix].Value = {};
-			if (ix % 5 == 0)
+			if (ix % 7 == 0)
+			{
+				gvs[ix].Value.GlueType = GlueValueType_Tuple;
+				auto tuple = std::make_unique<GlueValue[]>(3);
+
+				tuple[0].GlueType = GlueValueType_String;
+				tuple[0].StringValue = _com_util::ConvertStringToBSTR("VOD.L");
+				tuple[1].GlueType = GlueValueType_Int;
+				tuple[1].LongValue = 5251 * (ix + 1);
+				tuple[2].GlueType = GlueValueType_Double;
+				tuple[2].DoubleValue = exp(3.14 + ix);
+
+				gvs[ix].Value.Tuple = CreateValuesVARIANTSafeArray(tuple.get(), 3);
+			}
+			else if (ix % 5 == 0)
 			{
 				// build a composite
 				gvs[ix].Value.GlueType = GlueValueType_Composite;
@@ -439,7 +453,7 @@ void CGlueMFCView::OnSetGlueContextClicked()
 				{
 					throw_if_fail(SafeArrayPutElement(dbl_sa, &dbl_ix, &dbl_arr[dbl_ix]));
 				}
-
+				
 				gvs[ix].Value.DoubleArray = dbl_sa;
 			}
 			else

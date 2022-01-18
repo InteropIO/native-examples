@@ -16,7 +16,7 @@
 	high_property_prefixes("_get","_put","_putref")\
 	auto_rename
 
-#import GLUE_COM_PATH\
+#import "C:\work\tick42\stash\dot-net-glue-com\GlueCom\bin\Debug\GlueCOM.dll"\
 	named_guids\
 	high_property_prefixes("_get","_put","_putref")	
 
@@ -251,7 +251,10 @@ namespace GlueCOM
 				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					GlueValue* inner = static_cast<GlueValue*>(pTuple[i].pvRecord);
-					TraverseValue<T, N>(*inner, parent, tree, node, addNode);
+
+					const GlueValue tuple_item = *inner;
+					auto tuple_node = addNode(tree, node, to_string(i).c_str(), false, tuple_item, parent);
+					TraverseValue<T, N>(tuple_item, parent, tree, &tuple_node, addNode);
 				}
 
 				SafeArrayUnaccessData(saValues);
@@ -424,6 +427,7 @@ namespace GlueCOM
 	extern SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len);
 	extern SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len);
 	extern SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len);
+	extern SAFEARRAY* CreateValuesVARIANTSafeArray(GlueValue* contextValues, int len);
 	extern HRESULT CreateGlueContextsFromSafeArray(SAFEARRAY* sa, GlueContext** gc, long* count);
 	extern HRESULT GetRecordInfo(REFGUID rGuidTypeInfo, IRecordInfo** pRecordInfo);
 	extern HRESULT GetIRecordType(
