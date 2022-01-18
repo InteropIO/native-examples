@@ -466,6 +466,7 @@ void CGlueMFCView::OnSetGlueContextClicked()
 		auto sa = CreateGlueContextValuesSafeArray(gvs.get(), len);
 
 		context->SetContextDataOnFieldPath("data.outer.something.in.here", sa);
+		//context->Remove("data.outer.something");
 
 		// destroy the safe array
 		throw_if_fail(SafeArrayDestroy(sa));
