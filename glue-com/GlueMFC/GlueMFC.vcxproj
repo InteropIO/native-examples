@@ -191,6 +191,7 @@
     <ClInclude Include="GlueMFC.h" />
     <ClInclude Include="GlueMFCDoc.h" />
     <ClInclude Include="GlueMFCView.h" />
+    <ClInclude Include="glue_defines.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
