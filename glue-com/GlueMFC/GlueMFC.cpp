@@ -154,32 +154,52 @@ BOOL CGlueMFCApp::InitInstance()
 
 	// change the glue user, if required
 	instance.UserName = user;
-	theGlue->Start(instance);
+	GlueConfiguration config = {};
+	config.InitTimeoutMsecs = 5000;
+	theGlue->OverrideConfiguration(config);
 
+	bool initialized = false;
+	// this would throw if the timeout is reached; use the raw_ version and check the hresult or catch any exceptions here
+	try
+	{
+		theGlue->Start(instance);
+		initialized = true;
+	}
+	catch (...)
+	{
+		// handle glue starting failed
+	}
+	
 	SysFreeString(app);
 	SysFreeString(user);
 
-	// register a child app
-	GlueAppDefinition mfcDef;
-	const auto name = _com_util::ConvertStringToBSTR("MFCChild");
-	mfcDef.Name = name;
-	const auto title = _com_util::ConvertStringToBSTR("MFC Child");
-	mfcDef.Title = title;
-	const auto category = _com_util::ConvertStringToBSTR("MFC");
-	mfcDef.Category = category;
+	if (initialized)
+	{
+		// register a child app
+		GlueAppDefinition mfcDef;
+		const auto name = _com_util::ConvertStringToBSTR("MFCChild");
+		mfcDef.Name = name;
+		const auto title = _com_util::ConvertStringToBSTR("MFC Child");
+		mfcDef.Title = title;
+		const auto category = _com_util::ConvertStringToBSTR("MFC");
+		mfcDef.Category = category;
 
-	theGlue->AppFactoryRegistry->RegisterAppFactory(mfcDef, this);
+		theGlue->AppFactoryRegistry->RegisterAppFactory(mfcDef, this);
 
-	SysFreeString(name);
-	SysFreeString(title);
-	SysFreeString(category);
+		SysFreeString(name);
+		SysFreeString(title);
+		SysFreeString(category);
+	}
 
 	// The one and only window has been initialized, so show and update it
 	m_pMainWnd->ShowWindow(SW_SHOW);
 	m_pMainWnd->UpdateWindow();
 
-	const auto view = dynamic_cast<CGlueMFCView*>(dynamic_cast<CMainFrame*>(m_pMainWnd)->GetActiveView());
-	view->RegisterGlueWindow(m_pMainWnd, true);
+	if (initialized)
+	{
+		const auto view = dynamic_cast<CGlueMFCView*>(dynamic_cast<CMainFrame*>(m_pMainWnd)->GetActiveView());
+		view->RegisterGlueWindow(m_pMainWnd, true);
+	}
 
 	return TRUE;
 }

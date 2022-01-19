@@ -71,6 +71,11 @@ public:
 	HRESULT __stdcall raw_HandleWindowDestroyed(
 		/*[in]*/ struct IGlueWindow* GlueWindow) override;
 
+	HRESULT __stdcall raw_HandleWindowEvent(
+		/*[in]*/ struct IGlueWindow* GlueWindow,
+		/*[in]*/ enum GlueWindowEventType eventType,
+		/*[in]*/ struct GlueValue eventData) override;
+
 	HRESULT __stdcall raw_SaveState(
 		struct IGlueValueReceiver* receiver) override;
 	HRESULT __stdcall raw_Initialize(

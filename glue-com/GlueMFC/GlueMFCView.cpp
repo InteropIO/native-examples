@@ -231,6 +231,23 @@ HRESULT CGlueMFCView::raw_HandleWindowDestroyed(IGlueWindow* GlueWindow)
 	return S_OK;
 }
 
+HRESULT CGlueMFCView::raw_HandleWindowEvent(IGlueWindow* GlueWindow, GlueWindowEventType eventType, GlueValue eventData)
+{
+	if (eventType == GlueWindowEventType_FocusChanged)
+	{
+		if (eventData.BoolValue)
+		{
+			OutputDebugString(L"Got focus!\n");
+		}
+		else
+		{
+			OutputDebugString(L"Lost focus!\n");
+		}
+	}
+
+	return S_OK;
+}
+
 HRESULT CGlueMFCView::raw_SaveState(IGlueValueReceiver* receiver)
 {
 	GlueValue v{};
