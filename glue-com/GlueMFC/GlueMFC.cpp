@@ -35,7 +35,7 @@ IGlue42Ptr theGlue;
 
 // CGlueMFCApp construction
 
-CGlueMFCApp::CGlueMFCApp() noexcept
+CGlueMFCApp::CGlueMFCApp() noexcept : m_announcers_(new std::map<HWND, IAppAnnouncer*>)
 {
 	HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 	throw_if_fail(hr);
@@ -56,8 +56,6 @@ CGlueMFCApp::CGlueMFCApp() noexcept
 	// TODO: add construction code here,
 	// Place all significant initialization in InitInstance
 
-	m_announcers_ = new std::map<HWND, IAppAnnouncer*>;
-
 	hr = CoCreateInstance(CLSID_Glue42, nullptr, CLSCTX_INPROC_SERVER, IID_IGlue42, reinterpret_cast<void**>(&theGlue));
 	throw_if_fail(hr);
 	throw_if_fail(ExtractGlueRecordInfos());
@@ -66,6 +64,32 @@ CGlueMFCApp::CGlueMFCApp() noexcept
 HRESULT CGlueMFCApp::raw_CreateApp(BSTR appDefName, GlueValue state, IAppAnnouncer* announcer)
 {
 	create_new_frame(announcer);
+	return S_OK;
+}
+
+HRESULT CGlueMFCApp::raw_HandleConnectionStatus(GlueState state, BSTR Message, long long date)
+{
+	return S_OK;
+}
+
+HRESULT CGlueMFCApp::raw_HandleInstanceStatus(GlueInstance Instance, VARIANT_BOOL active)
+{
+	return S_OK;
+}
+
+HRESULT CGlueMFCApp::raw_HandleMethodStatus(GlueMethod method, VARIANT_BOOL active)
+{
+	return S_OK;
+}
+
+HRESULT CGlueMFCApp::raw_HandleGlueContext(GlueContext context, VARIANT_BOOL created)
+{
+	return S_OK;
+}
+
+HRESULT CGlueMFCApp::raw_HandleException(BSTR Message, GlueValue ex)
+{
+	// the ex contains the message, stack and inner exceptions as a composite
 	return S_OK;
 }
 
@@ -156,24 +180,29 @@ BOOL CGlueMFCApp::InitInstance()
 	instance.UserName = user;
 	GlueConfiguration config = {};
 	config.InitTimeoutMsecs = 5000;
+	config.AsyncInit = false;
 	theGlue->OverrideConfiguration(config);
+	theGlue->Subscribe(this);
 
-	bool initialized = false;
-	// this would throw if the timeout is reached; use the raw_ version and check the hresult or catch any exceptions here
 	try
 	{
+		// for the synchronous version, this would throw if the timeout is reached; use the raw_ version and check the hresult or catch any exceptions here
 		theGlue->Start(instance);
-		initialized = true;
+	}
+	catch (const _com_error& e)
+	{
+		MessageBox(0, e.Description(), L"Connecting to Glue failed", 0);
+		// handle glue starting failed
 	}
 	catch (...)
 	{
-		// handle glue starting failed
+		// something else happened
 	}
-	
+
 	SysFreeString(app);
 	SysFreeString(user);
 
-	if (initialized)
+	if (theGlue->GetState() == GlueState_Connected)
 	{
 		// register a child app
 		GlueAppDefinition mfcDef;
@@ -195,7 +224,7 @@ BOOL CGlueMFCApp::InitInstance()
 	m_pMainWnd->ShowWindow(SW_SHOW);
 	m_pMainWnd->UpdateWindow();
 
-	if (initialized)
+	if (theGlue->GetState() == GlueState_Connected)
 	{
 		const auto view = dynamic_cast<CGlueMFCView*>(dynamic_cast<CMainFrame*>(m_pMainWnd)->GetActiveView());
 		view->RegisterGlueWindow(m_pMainWnd, true);

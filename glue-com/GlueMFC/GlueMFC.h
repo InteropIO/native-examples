@@ -16,7 +16,7 @@
 // See GlueMFC.cpp for the implementation of this class
 //
 
-class CGlueMFCApp : public CWinApp, IAppFactory
+class CGlueMFCApp : public CWinApp, IAppFactory, IGlueEvents
 {
 public:
 	CGlueMFCApp() noexcept;
@@ -34,6 +34,8 @@ public:
 	{
 		if (riid == IID_IAppFactory || riid == IID_IUnknown)
 			*ppv = static_cast<IAppFactory*>(this);
+		else if (riid == IID_IGlueEvents)
+			*ppv = static_cast<IGlueEvents*>(this);
 		else
 			*ppv = nullptr;
 
@@ -59,6 +61,23 @@ public:
 		return l;
 	}
 
+protected:
+	HRESULT __stdcall raw_HandleConnectionStatus(
+		/*[in]*/ enum GlueState state,
+		/*[in]*/ BSTR Message,
+		/*[in]*/ __int64 date) override;
+	HRESULT __stdcall raw_HandleInstanceStatus(
+		/*[in]*/ struct GlueInstance Instance,
+		/*[in]*/ VARIANT_BOOL active) override;
+	HRESULT __stdcall raw_HandleMethodStatus(
+		/*[in]*/ struct GlueMethod method,
+		/*[in]*/ VARIANT_BOOL active) override;
+	HRESULT __stdcall raw_HandleGlueContext(
+		/*[in]*/ struct GlueContext context,
+		/*[in]*/ VARIANT_BOOL created) override;
+	HRESULT __stdcall raw_HandleException(
+		/*[in]*/ BSTR Message,
+		/*[in]*/ struct GlueValue ex);
 
 private:
 	ULONG m_cRef = 0;
