@@ -1,2 +1,5 @@
 /glue-com/GlueMFC/x64/*
 /glue-com/GlueMFC/.vs/*
+/glue-c-exports/cpp-console-example/Debug/
+/glue-c-exports/cpp-console-example/.vs/
+/glue-c-exports/.vs/
