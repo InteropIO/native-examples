@@ -58,6 +58,11 @@ int main()
 			}
 		});
 
+	glue_subscribe_endpoints_status([](const char* endpoint_name, const char* origin, bool state, COOKIE cookie)
+		{
+			std::cout << (state ? "+" : "-") << endpoint_name << " at " << origin << std::endl;
+		}, nullptr);
+
 	const auto wait_res = WaitForSingleObject(initEvent, 10000);
 	if (wait_res == WAIT_OBJECT_0)
 	{
