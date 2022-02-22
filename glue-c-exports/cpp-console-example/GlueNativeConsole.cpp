@@ -228,6 +228,18 @@ int main()
 			continue;
 		}
 
+		if (input.rfind("writer_") == 0)
+		{
+			std::string channel_name = "___channel___";
+			channel_name.append(input.substr(strlen("writer_")));
+
+			const auto writer = glue_get_context_writer(channel_name.c_str(), "data.some_field");
+			glue_push_json_payload(writer, "{a: 5, y: {s: \"yes\", z: 5.155, abc: [12,3,4,5,66]}}");
+			glue_destroy_resource(writer);
+
+			continue;
+		}
+
 		if (input.rfind("push_") == 0)
 		{
 			std::string branch = input.substr(strlen("push_"));
@@ -266,67 +278,85 @@ void cxt_callback(const char* cxt, const char* field_path, const glue_value* v, 
 }
 
 
-void handle_payload(const char* method, COOKIE cookie, const glue_payload* payload)
+void traverse_glue_value(const glue_value& gv, std::stringstream& str)
 {
-	std::cout << static_cast<const char*>(cookie) << ": Payload from " << method << " with origin " <<
-		(payload->origin != nullptr ? payload->origin : "NULL") << " with status " << payload->status << std::endl;
-
 #define BUILD_STR(ARR)\
         for (int ix = 0; ix < gv.len; ++ix)\
         {\
-			str += std::to_string(gv.ARR[ix]);\
-            str.push_back(',');\
+			str << gv.ARR[ix] << ",";\
         }\
+
+	if (gv.len < 0)
+	{
+		switch (gv.type)
+		{
+		case glue_type::glue_bool: str << gv.b << std::endl; break;
+		case glue_type::glue_int: str << gv.i << std::endl; break;
+		case glue_type::glue_long: str << gv.l << std::endl; break;
+		case glue_type::glue_double: str << gv.d << std::endl; break;
+		case glue_type::glue_string: str << gv.s << std::endl; break;
+		case glue_type::glue_datetime: str << gv.l << std::endl; break;
+		default:;
+		}
+	}
+	else
+	{
+		str << "(" << gv.len << ")" << "[";
+		switch (gv.type)
+		{
+		case glue_type::glue_bool:
+			BUILD_STR(bb)
+				break;
+		case glue_type::glue_int:
+			BUILD_STR(ii)
+				break;
+		case glue_type::glue_long:
+			BUILD_STR(ll)
+				break;
+		case glue_type::glue_double:
+			BUILD_STR(dd)
+				break;
+		case glue_type::glue_string:
+			BUILD_STR(ss)
+				break;
+		case glue_type::glue_datetime:
+			BUILD_STR(ll)
+				break;
+		case glue_type::glue_tuple:
+			for (int i = 0; i < gv.len; ++i)
+			{
+				traverse_glue_value(gv.tuple[i], str);
+			}
+			break;
+		case glue_type::glue_composite:
+		case glue_type::glue_composite_array:
+			for (int i = 0; i < gv.len; ++i)
+			{
+				const auto arg = gv.composite[i];
+				str << arg.name << " = ";
+				traverse_glue_value(arg.value, str);
+			}
+			break;
+		default:;
+		}
+		str << "]";
+	}
+}
+
+void handle_payload(const char* endpoint, COOKIE cookie, const glue_payload* payload)
+{
+	std::cout << static_cast<const char*>(cookie) << ": Payload from " << endpoint << " with origin " <<
+		(payload->origin != nullptr ? payload->origin : "NULL") << " with status " << payload->status << std::endl;
 
 	for (int i = 0; i < payload->args_len; ++i)
 	{
 		const auto arg = payload->args[i];
-		const auto gv = arg.value;
 		std::cout << arg.name << " = ";
-		if (gv.len < 0)
-		{
-			switch (gv.type)
-			{
-			case glue_type::glue_bool: std::cout << gv.b << std::endl; break;
-			case glue_type::glue_int: std::cout << gv.i << std::endl; break;
-			case glue_type::glue_long: std::cout << gv.l << std::endl; break;
-			case glue_type::glue_double: std::cout << gv.d << std::endl; break;
-			case glue_type::glue_string: std::cout << gv.s << std::endl; break;
-			case glue_type::glue_datetime: std::cout << gv.l << std::endl; break;
-			case glue_type::glue_tuple: break;
-			case glue_type::glue_composite: break;
-			case glue_type::glue_composite_array: break;
-			default:;
-			}
-		}
-		else
-		{
-			std::string str;
-			str += '[';
-			switch (gv.type)
-			{
-			case glue_type::glue_bool:
-				BUILD_STR(bb)
-					break;
-			case glue_type::glue_int:
-				BUILD_STR(ii)
-					break;
-			case glue_type::glue_long:
-				BUILD_STR(ll)
-					break;
-			case glue_type::glue_double:
-				BUILD_STR(dd)
-					break;
-			case glue_type::glue_string: break;
-			case glue_type::glue_datetime: break;
-			case glue_type::glue_tuple: break;
-			case glue_type::glue_composite: break;
-			case glue_type::glue_composite_array: break;
-			default:;
-			}
-			str += ']';
-			std::cout << str;
-		}
+
+		const auto gv = arg.value;
+		std::stringstream str;
+		traverse_glue_value(gv, str);
+		std::cout << str.str() << std::endl;
 	}
 	std::cout << std::endl;
 }
