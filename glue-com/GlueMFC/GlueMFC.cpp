@@ -181,6 +181,8 @@ BOOL CGlueMFCApp::InitInstance()
 	GlueConfiguration config = {};
 	config.InitTimeoutMsecs = 5000;
 	config.AsyncInit = false;
+	// set to ignore the main app from saving in layouts so it acts as a host app
+	// config.IgnoreFromLayouts = true;
 	theGlue->OverrideConfiguration(config);
 	theGlue->Subscribe(this);
 
@@ -205,7 +207,7 @@ BOOL CGlueMFCApp::InitInstance()
 	if (theGlue->GetState() == GlueState_Connected)
 	{
 		// register a child app
-		GlueAppDefinition mfcDef;
+		GlueAppDefinition mfcDef{};
 		const auto name = _com_util::ConvertStringToBSTR("MFCChild");
 		mfcDef.Name = name;
 		const auto title = _com_util::ConvertStringToBSTR("MFC Child");
