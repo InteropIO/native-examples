@@ -3,3 +3,5 @@
 /glue-c-exports/cpp-console-example/Debug/
 /glue-c-exports/cpp-console-example/.vs/
 /glue-c-exports/.vs/
+/glue-c-exports/mfc-example/.vs
+/glue-c-exports/mfc-example/GlueCLI_MFC.vcxproj.user
