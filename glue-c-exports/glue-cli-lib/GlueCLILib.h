@@ -121,7 +121,7 @@ VAL_ARR_BUILD(glue_arg*, glv_comps, composite, glue_composite_array);
 
 ARG_BUILD(bool, glarg_b, b, glue_bool);
 ARG_BUILD(int, glarg_i, i, glue_int);
-ARG_BUILD(long, glarg_l, l, glue_long);
+ARG_BUILD(long long, glarg_l, l, glue_long);
 ARG_BUILD(double, glarg_d, d, glue_double);
 ARG_BUILD(const char*, glarg_s, s, glue_string);
 ARG_BUILD(long long, glarg_dt, l, glue_datetime);
