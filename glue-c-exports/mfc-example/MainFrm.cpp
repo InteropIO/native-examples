@@ -106,7 +106,12 @@ void CMainFrame::Dump(CDumpContext& dc) const
  */
 void CMainFrame::OnWindowEvent(glue_window_command command, const char* context_name)
 {
-	if (command == glue_window_command::data_update)
+	switch (command)
+	{
+	case glue_window_command::init:
+		// initialized
+		break;
+	case glue_window_command::data_update:
 	{
 		const auto reader = glue_read_context_sync(context_name);
 
@@ -114,12 +119,19 @@ void CMainFrame::OnWindowEvent(glue_window_command command, const char* context_
 		s << glue_read_s(reader, "data.contact.displayName");
 		const CString title(s.str().c_str());
 		m_button.SetWindowTextW(title);
-	} else
+		break;
+	}
+	case glue_window_command::channel_switch:
 	{
 		std::stringstream s;
 		s << context_name;
 		const CString title(s.str().c_str());
 		m_button.SetWindowTextW(title);
+		break;
+	}
+	case glue_window_command::close:
+		// handle closed
+		break;
 	}
 }
 #endif //_DEBUG

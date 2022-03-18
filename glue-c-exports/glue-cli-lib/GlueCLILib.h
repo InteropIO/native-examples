@@ -181,7 +181,7 @@ enum class glue_state { none, connecting, connected, initialized, disconnected }
  */
 typedef void (*glue_init_callback_function)(glue_state state, const char* message, const glue_payload*, COOKIE);
 
-enum class glue_window_command { init, channel_switch, data_update };
+enum class glue_window_command { init, channel_switch, data_update, close };
 
 /**
  * \brief Callback functions for registered windows.
