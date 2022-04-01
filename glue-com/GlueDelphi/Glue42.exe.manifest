@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>  
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1"
+          manifestVersion="1.0">
+	
+
+
+	<dependency>  
+		<dependentAssembly>  
+			<assemblyIdentity
+					name="GlueCOM"
+					version="1.56.0.0"
+					processorArchitecture="msil"
+					publicKeyToken="dbb353f1544d18d3"
+					/>
+		</dependentAssembly>  
+	</dependency>  
+</assembly>
