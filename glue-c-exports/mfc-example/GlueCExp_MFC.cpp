@@ -222,13 +222,34 @@ BOOL CGlueCExpMFCApp::InitInstance()
 					}
 				}, cookie);
 
-			// register the main window - note the startup flag is true
-			glue_register_window(app->m_pMainWnd->m_hWnd,
+			// register the main window
+			glue_register_main_window(app->m_pMainWnd->m_hWnd,
+				[](glue_app_command command, const void* callback, const ::glue_payload* payload, COOKIE cookie)
+				{
+					switch (command)
+					{
+					case glue_app_command::init:
+					{
+						auto json = glue_read_json(payload->reader, nullptr);
+						MessageBoxA(0, json, "Glue restore state", 0);
+					}
+					break;
+					case glue_app_command::save:
+						glue_push_json_payload(callback, "{cats: 55}");
+						break;
+					case glue_app_command::shutdown:
+						ExitProcess(0);
+					case glue_app_command::create:
+						// only received for factories
+						break;
+					default:;
+					}
+				},
 				[](glue_window_command command, const char* context_name, COOKIE cookie)
 				{
 					auto main_wnd = static_cast<CMainFrame*>(const_cast<void*>(cookie));
 					main_wnd->OnWindowEvent(command, context_name);
-				}, "Main MFC", app->m_pMainWnd, true);
+				}, "Main MFC", app->m_pMainWnd);			
 
 			/****
 				 **** Here you can use Glue to:

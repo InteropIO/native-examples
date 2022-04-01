@@ -5,3 +5,6 @@
 /glue-c-exports/.vs/
 /glue-c-exports/mfc-example/.vs
 /glue-c-exports/mfc-example/GlueCLI_MFC.vcxproj.user
+/glue-c-exports/cpp-console-example/x64/*
+/glue-c-exports/mfc-example/Debug/*
+/glue-c-exports/mfc-example/x64/*

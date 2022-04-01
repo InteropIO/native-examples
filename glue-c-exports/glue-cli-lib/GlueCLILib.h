@@ -303,6 +303,23 @@ extern "C" GLUE_LIB_API int __cdecl glue_set_save_state(invocation_callback_func
 extern "C" GLUE_LIB_API const void* __cdecl glue_register_window(HWND hwnd, glue_window_callback_function callback = nullptr,
 	const char* title = nullptr, COOKIE cookie = nullptr, bool startup = false);
 
+
+/**
+ * \brief Registers the main application window in the Glue environment - this can be the 'main' window or a 'flier' window (if needed).
+ * \param hwnd The handle of the window to be registered.
+ * \param app_callback Receives - Init/Save/Shutdown events
+ * \param window_callback Called for any window updates.
+ * \param title Optional title for the window.
+ * \param cookie Optional callback cookie.
+ * \return reserved for future use.
+ */
+extern "C" GLUE_LIB_API const void* __cdecl glue_register_main_window(
+	HWND hwnd,
+	app_callback_function app_callback,
+	glue_window_callback_function window_callback,
+	const char* title = nullptr,
+	COOKIE cookie = nullptr);
+
 /**
  * \brief Checks whether this process has been launched by Glue Desktop - either by app.Start() or by layout loading.
  * \return true if launched by GD
@@ -324,7 +341,7 @@ extern "C" GLUE_LIB_API const void* __cdecl glue_get_starting_context_reader();
  * \param cookie Optional callback cookie.
  * \return 0 if successful.
  */
-extern "C" GLUE_LIB_API int __cdecl glue_register_endpoint(const char* endpoint_name, invocation_callback_function callback = nullptr, COOKIE cookie = nullptr);
+extern "C" GLUE_LIB_API int __cdecl glue_register_endpoint(const char* endpoint_name, invocation_callback_function callback, COOKIE cookie = nullptr);
 
 /**
  * \brief Registers a streaming endpoint.
