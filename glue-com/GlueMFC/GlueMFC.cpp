@@ -215,12 +215,16 @@ BOOL CGlueMFCApp::InitInstance()
 		mfcDef.Title = title;
 		const auto category = _com_util::ConvertStringToBSTR("MFC");
 		mfcDef.Category = category;
+		auto customProps = _com_util::ConvertStringToBSTR("{includeInWorkspaces: true}");
+		mfcDef.CustomPropertiesJson = customProps;
+		mfcDef.SynchronousDestroy = true;
 
 		theGlue->AppFactoryRegistry->RegisterAppFactory(mfcDef, this);
 
 		SysFreeString(name);
 		SysFreeString(title);
 		SysFreeString(category);
+		SysFreeString(customProps);
 	}
 
 	// The one and only window has been initialized, so show and update it
