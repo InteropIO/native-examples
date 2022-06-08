@@ -45,8 +45,8 @@ public:
 #endif
 
 protected:
-	IGlueWindow* m_cGlueWindow = nullptr;
-	bool main_;
+	IGlueWindowPtr m_cGlueWindow = nullptr;
+	bool main_ = true;
 	bool registered_ = false;
 
 	// Generated message map functions
@@ -94,7 +94,7 @@ public:
 
 		if (*ppv)
 		{
-			static_cast<IUnknown*>(*ppv)->AddRef();
+			AddRef();
 			return S_OK;
 		}
 
@@ -110,7 +110,9 @@ public:
 	{
 		const ULONG l = InterlockedDecrement(&m_cRef);
 		if (l == 0)
-			delete this;
+		{
+			// do not delete this; lifetime is MFC managed
+		}
 		return l;
 	}
 

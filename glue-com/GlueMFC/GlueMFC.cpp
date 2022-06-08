@@ -55,10 +55,6 @@ CGlueMFCApp::CGlueMFCApp() noexcept : m_announcers_(new std::map<HWND, IAppAnnou
 
 	// TODO: add construction code here,
 	// Place all significant initialization in InitInstance
-
-	hr = CoCreateInstance(CLSID_Glue42, nullptr, CLSCTX_INPROC_SERVER, IID_IGlue42, reinterpret_cast<void**>(&theGlue));
-	throw_if_fail(hr);
-	throw_if_fail(ExtractGlueRecordInfos());
 }
 
 HRESULT CGlueMFCApp::raw_CreateApp(BSTR appDefName, GlueValue state, IAppAnnouncer* announcer)
@@ -164,6 +160,11 @@ BOOL CGlueMFCApp::InitInstance()
 	// app was launched with /RegServer, /Register, /Unregserver or /Unregister.
 	if (!ProcessShellCommand(cmdInfo))
 		return FALSE;
+
+	auto hr = CoCreateInstance(CLSID_Glue42, nullptr, CLSCTX_INPROC_SERVER, IID_IGlue42, reinterpret_cast<void**>(&theGlue));
+	throw_if_fail(hr);
+	throw_if_fail(ExtractGlueRecordInfos());
+
 
 	// start glue
 	GlueInstance instance = {};

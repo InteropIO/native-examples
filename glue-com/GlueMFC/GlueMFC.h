@@ -57,7 +57,9 @@ public:
 	{
 		const ULONG l = InterlockedDecrement(&m_cRef);
 		if (l == 0)
-			delete this;
+		{
+			// do not delete this; lifetime is MFC managed 
+		}
 		return l;
 	}
 
