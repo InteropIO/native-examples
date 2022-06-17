@@ -25,6 +25,15 @@ using namespace GlueCOM;
 
 namespace GlueCOM
 {
+	typedef void (*glue_result_handler)(SAFEARRAY* invocationResult, BSTR correlationId);
+	typedef void (*glue_context_handler)(IGlueContext* context, IGlueContextUpdate* update);
+	typedef void (*glue_request_handler)(GlueMethod Method,
+		GlueInstance caller,
+		SAFEARRAY* requestValues,
+		IGlueServerMethodResultCallback* resultCallback,
+		IRecordInfo* pGlueContextValueRI);
+
+
 	inline void throw_if_fail(HRESULT hr)
 	{
 		if (FAILED(hr))
@@ -68,10 +77,10 @@ namespace GlueCOM
 	}\
 
 	get_gv_as_array(get_glue_longs, LongArray, long long)
-	get_gv_as_array(get_glue_doubles, DoubleArray, double)
-	get_gv_as_array(get_glue_bools, BoolArray, bool)
+		get_gv_as_array(get_glue_doubles, DoubleArray, double)
+		get_gv_as_array(get_glue_bools, BoolArray, bool)
 
-	inline void get_glue_strings(const GlueValue& gv, vector<std::string>& v)
+		inline void get_glue_strings(const GlueValue& gv, vector<std::string>& v)
 	{
 		void* pVoid;
 		SAFEARRAY* saValues = gv.StringArray;
@@ -164,14 +173,17 @@ namespace GlueCOM
 	}
 
 	template<typename T>
-	extern HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count);
+	extern HRESULT SafeArrayAsItemArray(SAFEARRAY* sa, T** items, int* count);
 	extern HRESULT DestroyValue(const GlueValue& value);
 	extern HRESULT DestroyContextValuesSA(SAFEARRAY* sa, bool is_variant_array = false);
 
 	extern HRESULT ExtractGlueRecordInfos();
 
 	template <typename T, typename N>
-	HRESULT TraverseContextValues(SAFEARRAY* sa, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool, const GlueValue&, const GlueContextValue*) = nullptr, bool is_variant_array = false)
+	using add_node = N(*)(T*, N*, const char*, bool, const GlueValue&, const GlueContextValue*);
+
+	template <typename T, typename N>
+	HRESULT TraverseContextValues(SAFEARRAY* sa, T* tree = nullptr, N* node = nullptr, add_node<T, N> addNode = nullptr, bool is_variant_array = false)
 	{
 		void* pVoid;
 		HRESULT hr = SafeArrayAccessData(sa, &pVoid);
@@ -229,7 +241,7 @@ namespace GlueCOM
 	}
 
 	template <typename T, typename N>
-	extern HRESULT TraverseValue(const GlueValue& value, GlueContextValue* parent = nullptr, T* tree = nullptr, N* node = nullptr, N(*addNode)(T*, N*, const char*, bool, const GlueValue&, const GlueContextValue*) = nullptr)
+	extern HRESULT TraverseValue(const GlueValue& value, GlueContextValue* parent = nullptr, T* tree = nullptr, N* node = nullptr, add_node<T, N> addNode = nullptr)
 	{
 		if (value.IsArray)
 		{
@@ -439,12 +451,6 @@ namespace GlueCOM
 	class GlueContextHandler : public IGlueContextHandler
 	{
 	public:
-
-		HRESULT HandleContext(
-			struct IGlueContext* context) {
-			return S_OK;
-		}
-
 		//
 		// Raw methods provided by interface
 		//
@@ -455,11 +461,6 @@ namespace GlueCOM
 			const auto contextData = context->GetData();
 			cout << "Traversing context " << _com_util::ConvertBSTRToString(context->GetContextInfo().Name) << endl;
 			TraverseContextValues<void*, void*>(contextData);
-			return S_OK;
-		}
-
-		HRESULT __stdcall HandleContextUpdate(
-			struct IGlueContextUpdate* contextUpdate) {
 			return S_OK;
 		}
 

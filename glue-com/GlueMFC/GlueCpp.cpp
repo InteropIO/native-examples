@@ -4,7 +4,7 @@
 namespace GlueCOM
 {
 	template<typename T>
-	HRESULT TraverseSA(SAFEARRAY* sa, T** items, int* count)
+	HRESULT SafeArrayAsItemArray(SAFEARRAY* sa, T** items, int* count)
 	{
 		void* pVoid;
 		const HRESULT hr = SafeArrayAccessData(sa, &pVoid);
@@ -85,7 +85,7 @@ namespace GlueCOM
 				for (ULONG i = 0; i < saValues->rgsabound[0].cElements; ++i)
 				{
 					SysFreeString(pStrings[i]);
-				}				
+				}
 
 				throw_if_fail(SafeArrayUnaccessData(saValues));
 				throw_if_fail(SafeArrayDestroy(saValues));
@@ -113,7 +113,7 @@ namespace GlueCOM
 			}
 		}
 
-		return S_OK;		
+		return S_OK;
 	}
 
 	HRESULT DestroyContextValuesSA(SAFEARRAY* sa, bool is_variant_array)
@@ -203,13 +203,6 @@ namespace GlueCOM
 	class GlueResultHandler : public IGlueInvocationResultHandler
 	{
 	public:
-
-		HRESULT HandleResult(
-			SAFEARRAY* invocationResult,
-			_bstr_t correlationId) {
-			return S_OK;
-		}
-
 		//
 		// Raw methods provided by interface
 		//
@@ -218,49 +211,8 @@ namespace GlueCOM
 			/*[in]*/ SAFEARRAY* invocationResult,
 			/*[in]*/ BSTR correlationId) override
 		{
+			handler_(invocationResult, correlationId);
 
-			cout << "Results!";
-			void* pVoid;
-			SAFEARRAY* saArray = invocationResult;
-			const HRESULT hr = SafeArrayAccessData(saArray, &pVoid);
-
-			if (SUCCEEDED(hr))
-			{
-				long lowerBound, upperBound; // get array bounds
-				SafeArrayGetLBound(saArray, 1, &lowerBound);
-				SafeArrayGetUBound(saArray, 1, &upperBound);
-
-				const GlueInvocationResult* results = static_cast<GlueInvocationResult*>(pVoid);
-
-				const long cnt_elements = upperBound - lowerBound + 1;
-				for (int i = 0; i < cnt_elements; ++i) // iterate through returned values
-				{
-					const auto gcv = results[i];
-
-					TraverseContextValues<void*, void*>(gcv.result.Values);
-				}
-
-				SafeArrayUnaccessData(saArray);
-			}
-
-			return S_OK;
-		}
-
-		HRESULT HandleResult(
-			struct GlueMethod Method,
-			struct GlueResult Result)
-		{
-			return S_OK;
-		}
-
-		HRESULT __stdcall raw_HandleResult(
-			/*[in]*/ struct GlueMethod Method,
-			/*[in]*/ struct GlueResult Result)
-		{
-
-			cout << _com_util::ConvertBSTRToString(Result.Message) << endl;
-			TraverseContextValues<void*, void*>(Result.Values);
-			//m_glue->InvokeMethod(GlueMethod{}, Result.Values, NULL, -1);
 			return S_OK;
 		}
 
@@ -288,20 +240,18 @@ namespace GlueCOM
 		ULONG __stdcall Release() override
 		{
 			const ULONG l = InterlockedDecrement(&m_cRef);
-			if (l == 0)
-				delete this;
+			// if (l == 0) dont delete this;
 			return l;
 		}
 
-		GlueResultHandler(IGlue42Ptr glue)
+		GlueResultHandler(glue_result_handler handler) : handler_(handler)
 		{
-			m_glue = glue;
 			m_cRef = 0;
 		}
 
 	private:
-		IGlue42Ptr m_glue;
 		ULONG m_cRef;
+		glue_result_handler handler_;
 	};
 
 	class ContextBuilder : public IGlueContextBuilderCallback
@@ -384,15 +334,6 @@ namespace GlueCOM
 	class GlueRequestHandler : public IGlueRequestHandler
 	{
 	public:
-
-		HRESULT HandleInvocationRequest(
-			struct GlueMethod Method,
-			struct GlueInstance caller,
-			SAFEARRAY* requestValues,
-			struct IGlueServerMethodResultCallback* resultCallback) {
-			return S_OK;
-		}
-
 		//
 		// Raw methods provided by interface
 		//
@@ -404,45 +345,8 @@ namespace GlueCOM
 			/*[in]*/ struct IGlueServerMethodResultCallback* resultCallback) override
 		{
 
-			TraverseContextValues<void*, void*>(requestValues);
+			handler_(Method, caller, requestValues, resultCallback, m_pGlueContextValueRI);
 
-			GlueResult r{};
-			r.Message = _com_util::ConvertStringToBSTR("OK, Fine!");
-
-			GlueContextValue innerArgs[2];
-			innerArgs[0] = {};
-			innerArgs[0].Name = _com_util::ConvertStringToBSTR("Arg1");
-			innerArgs[0].Value = {};
-			innerArgs[0].Value.GlueType = GlueValueType_Double;
-			innerArgs[0].Value.DoubleValue = 3.14;
-
-			innerArgs[1] = {};
-			innerArgs[1].Name = _com_util::ConvertStringToBSTR("Arg2");
-			innerArgs[1].Value = {};
-			innerArgs[1].Value.GlueType = GlueValueType_String;
-			innerArgs[1].Value.StringValue = _com_util::ConvertStringToBSTR("Value2");
-
-
-			GlueContextValue invocationArgs[2];
-			invocationArgs[0] = {};
-			invocationArgs[0].Name = _com_util::ConvertStringToBSTR("Arg1");
-			invocationArgs[0].Value = {};
-			invocationArgs[0].Value.GlueType = GlueValueType_Double;
-			invocationArgs[0].Value.DoubleValue = 3.14;
-
-			invocationArgs[1] = {};
-			invocationArgs[1].Name = _com_util::ConvertStringToBSTR("DeepArg");
-			invocationArgs[1].Value = {};
-			invocationArgs[1].Value.GlueType = GlueValueType_Composite;
-			invocationArgs[1].Value.CompositeValue = CreateContextValuesVARIANTSafeArray(innerArgs, 2);
-
-			
-
-			const auto invocationArgsSA = CreateGlueContextValuesSafeArray(invocationArgs, 2);
-
-			r.Values = invocationArgsSA;
-
-			resultCallback->SendResult(r);
 			return S_OK;
 		}
 
@@ -470,80 +374,19 @@ namespace GlueCOM
 		ULONG __stdcall Release() override
 		{
 			const ULONG l = InterlockedDecrement(&m_cRef);
-			if (l == 0)
-				delete this;
+			// if (l == 0) dont delete this;
 			return l;
 		}
 
-		GlueRequestHandler()
-		{
+		GlueRequestHandler(IRecordInfo* pGlueContextValueRI, glue_request_handler handler) : handler_(handler) {
 			m_cRef = 0;
+			m_pGlueContextValueRI = pGlueContextValueRI;
 		}
 
 	private:
 		ULONG m_cRef;
-
-	};
-
-	class ServerInvocationHandler : public IGlueRequestHandler
-	{
-	public:
-		HRESULT HandleInvocationRequest(
-			struct GlueMethod Method,
-			struct GlueInstance caller,
-			SAFEARRAY* requestValues,
-			struct IGlueServerMethodResultCallback* resultCallback)
-		{
-
-			return S_OK;
-		}
-
-		HRESULT __stdcall raw_HandleInvocationRequest(
-			/*[in]*/ struct GlueMethod Method,
-			/*[in]*/ struct GlueInstance caller,
-			/*[in]*/ SAFEARRAY* requestValues,
-			/*[in]*/ struct IGlueServerMethodResultCallback* resultCallback) override
-		{
-			//resultCallback->SendResult();
-			return S_OK;
-		}
-
-		STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override
-		{
-			if (riid == IID_IGlueRequestHandler || riid == IID_IUnknown)
-				*ppv = static_cast<IGlueRequestHandler*>(this);
-			else
-				*ppv = nullptr;
-
-			if (*ppv)
-			{
-				static_cast<IUnknown*>(*ppv)->AddRef();
-				return S_OK;
-			}
-
-			return E_NOINTERFACE;
-		}
-
-		ULONG __stdcall AddRef() override
-		{
-			return InterlockedIncrement(&m_cRef);
-		}
-
-		ULONG __stdcall Release() override
-		{
-			const ULONG l = InterlockedDecrement(&m_cRef);
-			if (l == 0)
-				delete this;
-			return l;
-		}
-
-		ServerInvocationHandler()
-		{
-			m_cRef = 0;
-		}
-
-	private:
-		ULONG m_cRef;
+		IRecordInfo* m_pGlueContextValueRI;
+		glue_request_handler handler_;
 	};
 
 	// creates GlueInstance[]
