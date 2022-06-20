@@ -257,17 +257,7 @@ namespace GlueCOM
 	class ContextBuilder : public IGlueContextBuilderCallback
 	{
 	public:
-		ContextBuilder(int depth)
-		{
-			m_depth = depth;
-		}
-
-		HRESULT Build(
-			struct IGlueInvocationBuilder* builder)
-		{
-			return S_OK;
-		}
-
+				
 		//
 		// Raw methods provided by interface
 		//
@@ -275,19 +265,7 @@ namespace GlueCOM
 		HRESULT __stdcall raw_Build(
 			/*[in]*/ struct IGlueContextBuilder* builder) override
 		{
-			CComBSTR comBSTR(std::to_string(m_depth).c_str());
-			const _bstr_t level = comBSTR.Detach();
-			GlueValue gv{};
-			gv.GlueType = GlueValueType_Double;
-			gv.DoubleValue = 205.02032F * m_depth;
-			builder->AddGlueValue(level + "_Inner_GlueValue", gv);
-			builder->AddString(level + "_bam", "dam");
-			builder->AddDouble(level + "_bouble", 3.5 * m_depth);
-			if (m_depth > 0)
-			{
-				ContextBuilder inner(m_depth - 1);
-				builder->BuildComposite(level + "_Inner", &inner, false);
-			}
+			builder_(builder, cookie_);
 			return S_OK;
 		}
 
@@ -320,15 +298,15 @@ namespace GlueCOM
 			return l;
 		}
 
-		ContextBuilder()
+		ContextBuilder(glue_context_builder builder, const void* cookie = nullptr): builder_(builder), cookie_(cookie)
 		{
 			m_cRef = 0;
-			m_depth = 25;
 		}
 
 	private:
 		ULONG m_cRef;
-		int m_depth;
+		glue_context_builder builder_;
+		const void* cookie_;
 	};
 
 	class GlueRequestHandler : public IGlueRequestHandler

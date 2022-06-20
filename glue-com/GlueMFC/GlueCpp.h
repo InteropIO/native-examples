@@ -25,6 +25,7 @@ using namespace GlueCOM;
 
 namespace GlueCOM
 {
+	typedef void (*glue_context_builder)(const IGlueContextBuilder* builder, const void* cookie);
 	typedef void (*glue_result_handler)(SAFEARRAY* invocationResult, BSTR correlationId);
 	typedef void (*glue_context_handler)(IGlueContext* context, IGlueContextUpdate* update);
 	typedef void (*glue_request_handler)(GlueMethod Method,
@@ -459,8 +460,10 @@ namespace GlueCOM
 			/*[in]*/ struct IGlueContext* context) override
 		{
 			const auto contextData = context->GetData();
-			cout << "Traversing context " << _com_util::ConvertBSTRToString(context->GetContextInfo().Name) << endl;
+			auto pc = _com_util::ConvertBSTRToString(context->GetContextInfo().Name);
+			cout << "Traversing context " << pc << endl;
 			TraverseContextValues<void*, void*>(contextData);
+			delete[] pc;
 			return S_OK;
 		}
 
