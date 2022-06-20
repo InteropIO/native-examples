@@ -25,6 +25,52 @@ namespace GlueCOM
 		return S_FALSE;
 	}
 
+	// creates T[]
+	template <typename T>
+	SAFEARRAY* CreateGlueRecordSafeArray(T* items, int len, IRecordInfo* recordInfo)
+	{
+		SAFEARRAYBOUND bounds[1];
+		bounds[0].lLbound = 0;
+		bounds[0].cElements = len;
+
+		SAFEARRAY* psa = SafeArrayCreateEx(VT_RECORD, 1, bounds, recordInfo);
+
+		long ind = 0;
+		for (int i = 0; i < len; ++i)
+		{
+			throw_if_fail(SafeArrayPutElement(psa, &ind, &items[i]));
+			ind++;
+		}
+
+		return psa;
+	}
+
+	// variant[] corresponds to object[]
+	template <typename T>
+	SAFEARRAY* CreateGlueVariantSafeArray(T* items, int len, IRecordInfo* recordInfo)
+	{
+		SAFEARRAYBOUND bounds[1];
+		bounds[0].lLbound = 0;
+		bounds[0].cElements = len;
+
+		SAFEARRAY* psa = SafeArrayCreate(VT_VARIANT, 1, bounds);
+
+		long ind = 0;
+		for (int i = 0; i < len; ++i)
+		{
+			VARIANT item;
+			VariantInit(&item);
+			item.vt = VT_RECORD;
+			item.pRecInfo = recordInfo;
+			item.pvRecord = &items[i];
+
+			throw_if_fail(SafeArrayPutElement(psa, &ind, &item));
+			ind++;
+		}
+
+		return psa;
+	}
+
 	IRecordInfo* ri_glue_instance;
 	IRecordInfo* ri_glue_context_value;
 	IRecordInfo* ri_glue_value;

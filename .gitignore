@@ -8,3 +8,7 @@
 /glue-c-exports/cpp-console-example/x64/*
 /glue-c-exports/mfc-example/Debug/*
 /glue-c-exports/mfc-example/x64/*
+/glue-com/GlueCppConsole/.vs/
+/glue-com/GlueCppConsole/Debug/
+/glue-com/GlueCppConsole/x64/
+/glue-com/GlueMFC/Debug/

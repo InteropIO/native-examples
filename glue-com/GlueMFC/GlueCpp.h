@@ -437,6 +437,11 @@ namespace GlueCOM
 		return S_OK;
 	}
 
+	template <typename T>
+	extern SAFEARRAY* CreateGlueRecordSafeArray(T* items, int len, IRecordInfo* recordInfo);
+	template <typename T>
+	extern SAFEARRAY* CreateGlueVariantSafeArray(T* items, int len, IRecordInfo* recordInfo);
+
 	extern SAFEARRAY* CreateGlueContextValuesSafeArray(GlueContextValue* values, int len);
 	extern SAFEARRAY* CreateContextValuesVARIANTSafeArray(GlueContextValue* contextValues, int len);
 	extern SAFEARRAY* CreateValuesSafeArray(GlueValue* values, int len);
