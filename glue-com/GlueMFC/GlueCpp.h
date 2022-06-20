@@ -28,10 +28,10 @@ namespace GlueCOM
 	typedef void (*glue_context_builder)(const IGlueContextBuilder* builder, const void* cookie);
 	typedef void (*glue_result_handler)(SAFEARRAY* invocationResult, BSTR correlationId);
 	typedef void (*glue_context_handler)(IGlueContext* context, IGlueContextUpdate* update);
-	typedef void (*glue_request_handler)(GlueMethod Method,
+	typedef void (*glue_request_handler)(GlueMethod method,
 		GlueInstance caller,
-		SAFEARRAY* requestValues,
-		IGlueServerMethodResultCallback* resultCallback,
+		SAFEARRAY* request_values,
+		IGlueServerMethodResultCallback* result_callback,
 		IRecordInfo* pGlueContextValueRI);
 
 
