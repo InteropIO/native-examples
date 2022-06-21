@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <comdef.h>
+#include "import.h"
 
 inline void throw_if_fail(const HRESULT hr)
 {
@@ -18,10 +19,6 @@ inline void throw_if_fail(const HRESULT hr)
 	raw_interfaces_only\
 	high_property_prefixes("_get","_put","_putref")\
 	auto_rename
-
-#import "C:\work\tick42\stash\dot-net-glue-com\GlueCom\bin\Debug\GlueCOM.dll"\
-	named_guids\
-	high_property_prefixes("_get","_put","_putref")	
 
 namespace GlueCOM
 {

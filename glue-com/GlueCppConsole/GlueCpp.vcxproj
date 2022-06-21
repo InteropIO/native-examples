@@ -119,6 +119,9 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>(echo #pragma once &amp; echo. &amp; echo #import "$(LOCALAPPDATA)\Tick42\GlueSDK\GlueCOMv2\GlueCOM.dll" named_guids high_property_prefixes("_get","_put","_putref"^)) &gt;import.h</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -160,6 +163,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GlueCPP.h" />
+    <ClInclude Include="import.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
