@@ -130,6 +130,9 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PreBuildEvent>
+      <Command>(echo #pragma once &amp; echo. &amp; echo #import "$(LOCALAPPDATA)\Tick42\GlueSDK\GlueCOMv2\GlueCOM.dll" named_guids high_property_prefixes("_get","_put","_putref"^)) &gt;import.h</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -191,7 +194,7 @@
     <ClInclude Include="GlueMFC.h" />
     <ClInclude Include="GlueMFCDoc.h" />
     <ClInclude Include="GlueMFCView.h" />
-    <ClInclude Include="glue_defines.h" />
+    <ClInclude Include="import.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />

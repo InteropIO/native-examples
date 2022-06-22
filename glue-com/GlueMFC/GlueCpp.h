@@ -8,17 +8,13 @@
 #include <sstream>
 #include <tuple>
 #include <vector>
-#include "glue_defines.h"
+#include "import.h"
 
 #import "C:\Windows\Microsoft.NET\Framework\v4.0.30319\mscorlib.tlb"\
 	named_guids\
 	raw_interfaces_only\
 	high_property_prefixes("_get","_put","_putref")\
 	auto_rename
-
-#import "C:\work\tick42\stash\dot-net-glue-com\GlueCom\bin\Debug\GlueCOM.dll"\
-	named_guids\
-	high_property_prefixes("_get","_put","_putref")	
 
 using namespace std;
 using namespace GlueCOM;
