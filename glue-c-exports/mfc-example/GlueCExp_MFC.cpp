@@ -220,7 +220,7 @@ BOOL CGlueCExpMFCApp::InitInstance()
 					}
 					default:;
 					}
-				}, cookie);
+				}, nullptr, cookie);
 
 			// register the main window
 			glue_register_main_window(app->m_pMainWnd->m_hWnd,

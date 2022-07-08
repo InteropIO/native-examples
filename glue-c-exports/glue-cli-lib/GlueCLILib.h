@@ -531,10 +531,11 @@ extern "C" GLUE_LIB_API const void* __cdecl glue_subscribe_single_stream(const c
  * \brief Registers an app factory.
  * \param app_factory The name of the app
  * \param callback Called when the Glue requires an instance of that app to be created
+ * \param app_definition_json Optional json representation of the application definition to be used
  * \param cookie Optional callback cookie.
  * \return Reference to the factory. Call glue_destroy_resource to unregister the app factory.
  */
-extern "C" GLUE_LIB_API const void* __cdecl glue_app_register_factory(const char* app_factory, app_callback_function callback, COOKIE cookie = nullptr);
+extern "C" GLUE_LIB_API const void* __cdecl glue_app_register_factory(const char* app_factory, app_callback_function callback, const char* app_definition_json = nullptr, COOKIE cookie = nullptr);
 
 /**
  * \brief Announces a successful creation of a requested app.
