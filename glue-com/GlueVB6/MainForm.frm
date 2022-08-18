@@ -54,18 +54,19 @@ Attribute ClientListAppInstance.VB_VarHelpID = -1
 Dim WithEvents Invocator As GlueMethodInvocator
 Attribute Invocator.VB_VarHelpID = -1
 
+Private Declare Sub Sleep Lib "kernel32.dll" (ByVal dwMilliseconds As Long)
 
 Private Sub btnInitGlue_Click()
     Set Glue = New Glue42
+
     Glue.StartWithAppName "VB6 Host"
     
 '    Dim r As GlueDynamicValue
 '    Set r = Glue.GetGlueDynamicValueByFieldPath("{""a"": 5, ""x"": 100, ""s"": ""yes"", c: {""name"": ""John"", ""a"":44}}", "c.name")
 '    MsgBox r.Value
-
-    
     Set AppFactory = Glue.AppFactoryRegistry.RegisterAppFactoryInSink("VB6Child", "VB6Child", "", "{includeInWorkspaces: true}")
     Set VbMethod = Glue.CreateServerMethod("GlueVB6Method", "", "", "")
+    
     Set AppManager = Glue.CreateAppManager
     AppManager.Subscribe Nothing
     Set ClientListApp = AppManager.GetApplication("ClientList")
@@ -80,9 +81,35 @@ Private Sub btnInvoke_Click()
 End Sub
 
 Private Sub btnStartApp_Click()
+'    AppManager.StartApplicationWithJson "ClientList", "1234", "" & _
+'            "{" & _
+'            "   ""urlLoadOptions"": {" & _
+'            "       ""extraHeaders"": ""Content-Type: application/x-www-form-urlencoded"", " & _
+'            "       ""postData"": [" & _
+'            "           {" & _
+'            "               ""type"": ""base64""," & _
+'            "               ""data"": ""base64string""" & _
+'            "           }" & _
+'            "       ]" & _
+'            "   }" & _
+'            "}", 1000, 1000
+'    Exit Sub
 '
     If ClientListApp.IsAnnounced Then
+'        ClientListApp.StartWithJson "1234", "" & _
+'            "{" & _
+'            "   ""urlLoadOptions"": {" & _
+'            "       ""extraHeaders"": ""Content-Type: application/x-www-form-urlencoded"", " & _
+'            "       ""postData"": [" & _
+'            "           {" & _
+'            "               ""type"": ""base64""," & _
+'            "               ""data"": ""base64string""" & _
+'            "           }" & _
+'            "       ]" & _
+'            "   }" & _
+'            "}", 1000
         Set ClientListAppInstance = ClientListApp.CreateInstance
+        ClientListAppInstance.Subscribe Nothing
         ClientListAppInstance.StartWithJson "" & _
             "{" & _
             "   ""urlLoadOptions"": {" & _
@@ -114,13 +141,18 @@ End Sub
 
 Private Sub ClientListAppInstance_OnAppInstanceEvent(ByVal Instance As GlueApplicationInstance, ByVal started As Boolean, ByVal success As Boolean, ByVal Message As String)
 '
+    If started Then
+        Dim ws() As GlueWindow
+        ws = Instance.GetWindows
+        ws(0).NavigateWithJson "https://www.google.com", ""
+    End If
 End Sub
 
 Private Sub AppManager_OnApplicationDefinition(ByVal appName As String, ByVal added As Boolean)
 '
 End Sub
 
-Private Sub AppManager_OnApplicationInstance(ByVal appName As String, ByVal correlationId As String, ByVal Id As String, ByVal started As Boolean, ByVal Message As String)
+Private Sub AppManager_OnApplicationInstance(ByVal appName As String, ByVal correlationId As String, ByVal Id As String, ByVal started As Boolean, ByVal Message As String, ByVal Instance As GlueApplicationInstance)
 '
 End Sub
 
