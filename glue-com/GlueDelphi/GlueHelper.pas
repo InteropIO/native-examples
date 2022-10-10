@@ -51,6 +51,7 @@ type
   private
     FDataLambda: TProc<GlueMethod, TArray<GlueContextValue>, PSafeArray>;
   protected
+    function SubscriptionActivated(const GlueStreamSubscription: IGlueStreamSubscription): HResult; stdcall;
     function StreamOpened(stream: GlueMethod;
       const glueStreamSubscription: IGlueStreamSubscription): HResult; stdcall;
     function HandleStreamData(stream: GlueMethod; data: PSafeArray)
@@ -507,6 +508,12 @@ end;
 
 function TGlueStreamHandler.StreamOpened(stream: GlueMethod;
 const glueStreamSubscription: IGlueStreamSubscription): HResult;
+begin
+  Result := S_OK;
+end;
+
+function TGlueStreamHandler.SubscriptionActivated(
+  const GlueStreamSubscription: IGlueStreamSubscription): HResult;
 begin
   Result := S_OK;
 end;

@@ -59,10 +59,14 @@ type
       : HResult; stdcall;
     function HandleGlueContext(context: GlueContext; created: WordBool)
       : HResult; stdcall;
-    function HandleException(const ex: _Exception): HResult; stdcall;
+    function HandleException(const Message: WideString; ex: GlueValue)
+      : HResult; stdcall;
 
     // implements IGlueWindowEventHandler - channel updates for
     // registered Glue Window
+    function HandleWindowReady(const glueWindow: IGlueWindow): HResult; stdcall;
+    function HandleWindowEvent(const glueWindow: IGlueWindow;
+      eventType: GlueWindowEventType; eventData: GlueValue): HResult; stdcall;
     function HandleChannelData(const glueWindow: IGlueWindow;
       const channelUpdate: IGlueContextUpdate): HResult; stdcall;
     function HandleChannelChanged(const glueWindow: IGlueWindow;
@@ -116,6 +120,13 @@ function TForm1.HandleConnectionStatus(State: GlueState;
 begin
   memLog.Lines.Add(DateTimeToStr(GlueTimeToDateTime(date)) + ' UTC: ' +
     Message);
+  Result := S_OK;
+end;
+
+function TForm1.HandleException(const Message: WideString;
+  ex: GlueValue): HResult;
+begin
+  // NOTE: log exception
   Result := S_OK;
 end;
 
@@ -238,7 +249,7 @@ procedure TForm1.btnGlueInvokeClick(Sender: TObject);
 var
   handler: IGlueInvocationResultHandler;
   args: PSafeArray;
-//  targets: TGlueInstanceArray;
+  // targets: TGlueInstanceArray;
 begin
   handler := TGlueResultHandler.Create(
     procedure(results: TGlueInvocationResultArray; correlationId: string)
@@ -320,6 +331,19 @@ function TForm1.HandleWindowDestroyed(const glueWindow: IGlueWindow)
 begin
   // Glue Window Manager said that this window is destroyed, so clean up
   Close;
+  Result := S_OK;
+end;
+
+function TForm1.HandleWindowEvent(const glueWindow: IGlueWindow;
+eventType: GlueWindowEventType; eventData: GlueValue): HResult;
+begin
+  Result := S_OK;
+end;
+
+function TForm1.HandleWindowReady(const glueWindow: IGlueWindow): HResult;
+begin
+  // change the Glue Window title
+  glueWindow.SetTitle('Delphi Glue Window');
   Result := S_OK;
 end;
 
@@ -491,7 +515,7 @@ var
 begin
   gc := channelUpdate.GetContext;
   contextInfo := gc.GetContextInfo;
-//  memLog.Lines.Add('Bound to channel ' + contextInfo.name);
+  // memLog.Lines.Add('Bound to channel ' + contextInfo.name);
   channelData := gc.GetData;
   // TraverseGlueContextValuesSafeArray(channelData, memLog.Lines);
 
@@ -521,12 +545,6 @@ begin
   begin
     memLog.Lines.Add('Now in channel ' + channel.GetContextInfo.name);
   end;
-  Result := S_OK;
-end;
-
-function TForm1.HandleException(const ex: _Exception): HResult;
-begin
-  // NOTE: log exception
   Result := S_OK;
 end;
 
@@ -573,9 +591,6 @@ begin
     // register VCL form window as Glue Window so it will become sticky,
     // participate in Glue Groups and consume Glue channels
     glueWindow := G42.RegisterGlueWindow(Self.Handle, Self);
-
-    // change the Glue Window title
-    glueWindow.SetTitle('Delphi Glue Window');
   except
     on E: Exception do
       ShowMessage(E.ClassName + ' error raised, with message : ' + E.Message);
@@ -610,7 +625,8 @@ begin
 
   try
     // Get-or-create a context by name - in this case this is the Green channel
-    G42.GetGlueContext('___channel___Green', TGlueContextHandler.Create(nil,
+    G42.SubscribeGlueContext('___channel___Green',
+      TGlueContextHandler.Create(nil,
       procedure(gc: IGlueContext; gcv: TArray<GlueContextValue>)
       begin
         // show the Context data

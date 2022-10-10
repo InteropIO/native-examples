@@ -11,9 +11,6 @@ uses
 {$R *.res}
 
 begin
-  // CoUninitialize;
-
-  // if (Succeeded(CoInitializeEx(nil, COINIT_MULTITHREADED))) then
   begin
     Application.Initialize;
     Application.MainFormOnTaskbar := True;
