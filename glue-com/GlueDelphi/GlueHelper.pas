@@ -14,6 +14,8 @@ uses
 
 type
 
+  TProc<T1, T2, T3, T4, T5> = reference to procedure(Arg1: T1; Arg2: T2;
+    Arg3: T3; Arg4: T4; Arg5: T5);
   PGlueContextValue = ^GlueContextValue;
   PGlueMethod = ^GlueMethod;
   PGlueValue = ^GlueValue;
@@ -27,23 +29,25 @@ type
   private
     FHandlerLambda: TProc<TGlueInvocationResultArray, string>;
   protected
-    function HandleResult(invocationResult: PSafeArray; const correlationId: WideString): HResult; stdcall;
+    function HandleResult(invocationResult: PSafeArray;
+      const correlationId: WideString): HResult; stdcall;
   public
-    constructor Create(handlerLambda: TProc<TGlueInvocationResultArray, string>);
+    constructor Create(handlerLambda: TProc<TGlueInvocationResultArray,
+      string>);
   end;
 
   /// Lambda implementation for handling an invocation request
   TGlueRequestHandler = class(TInterfacedObject, IGlueRequestHandler)
   private
     FHandlerLambda: TProc<GlueMethod, GlueInstance, TArray<GlueContextValue>,
-      IGlueServerMethodResultCallback>;
+      IGlueServerMethodResultCallback, PSafeArray>;
   protected
     function HandleInvocationRequest(Method: GlueMethod; caller: GlueInstance;
       requestValues: PSafeArray;
       const resultCallback: IGlueServerMethodResultCallback): HResult; stdcall;
   public
     constructor Create(handlerLambda: TProc<GlueMethod, GlueInstance,
-      TArray<GlueContextValue>, IGlueServerMethodResultCallback>);
+      TArray<GlueContextValue>, IGlueServerMethodResultCallback, PSafeArray>);
   end;
 
   // Lambda implementation for handling Glue stream data - subscription side
@@ -51,9 +55,10 @@ type
   private
     FDataLambda: TProc<GlueMethod, TArray<GlueContextValue>, PSafeArray>;
   protected
-    function SubscriptionActivated(const GlueStreamSubscription: IGlueStreamSubscription): HResult; stdcall;
+    function SubscriptionActivated(const GlueStreamSubscription
+      : IGlueStreamSubscription): HResult; stdcall;
     function StreamOpened(stream: GlueMethod;
-      const glueStreamSubscription: IGlueStreamSubscription): HResult; stdcall;
+      const GlueStreamSubscription: IGlueStreamSubscription): HResult; stdcall;
     function HandleStreamData(stream: GlueMethod; data: PSafeArray)
       : HResult; stdcall;
     function HandleStreamStatus(stream: GlueMethod; State: GlueStreamState;
@@ -155,7 +160,8 @@ var
   I: Integer;
   vItem: tagVARIANT;
 begin
-  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion, GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
+  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion,
+    GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
     StringToGUID('{93da746a-fb5d-45c4-96fb-8d7f3ca43960}'), pri);
 
   if Succeeded(hr) then
@@ -189,7 +195,8 @@ var
   I: Integer;
   vItem: tagVARIANT;
 begin
-  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion, GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
+  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion,
+    GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
     StringToGUID('{c74dd3d8-08a3-4b68-a41e-af04acd319bd}'), pri);
 
   if Succeeded(hr) then
@@ -221,7 +228,8 @@ var
   sa: PSafeArray;
   I: Integer;
 begin
-  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion, GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
+  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion,
+    GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
     StringToGUID('{12E47256-B411-4024-BA5C-13DF4C78C31D}'), pri);
 
   if Succeeded(hr) then
@@ -250,7 +258,8 @@ var
   sa: PSafeArray;
   I: Integer;
 begin
-  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion, GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
+  hr := GetRecordInfoFromGuids(LIBID_GlueCOM, GlueCOMMajorVersion,
+    GlueCOMMinorVersion, LOCALE_USER_DEFAULT,
     StringToGUID('{c74dd3d8-08a3-4b68-a41e-af04acd319bd}'), pri);
 
   if Succeeded(hr) then
@@ -452,8 +461,8 @@ begin
   FHandlerLambda := handlerLambda;
 end;
 
-function TGlueResultHandler.HandleResult(invocationResult: PSafeArray;const correlationId: WideString)
-  : HResult; stdcall;
+function TGlueResultHandler.HandleResult(invocationResult: PSafeArray;
+const correlationId: WideString): HResult; stdcall;
 var
   results: PGlueInvocationResult;
   pv: PVOID;
@@ -507,13 +516,13 @@ begin
 end;
 
 function TGlueStreamHandler.StreamOpened(stream: GlueMethod;
-const glueStreamSubscription: IGlueStreamSubscription): HResult;
+const GlueStreamSubscription: IGlueStreamSubscription): HResult;
 begin
   Result := S_OK;
 end;
 
-function TGlueStreamHandler.SubscriptionActivated(
-  const GlueStreamSubscription: IGlueStreamSubscription): HResult;
+function TGlueStreamHandler.SubscriptionActivated(const GlueStreamSubscription
+  : IGlueStreamSubscription): HResult;
 begin
   Result := S_OK;
 end;
@@ -643,7 +652,7 @@ end;
 
 constructor TGlueRequestHandler.Create(handlerLambda
   : TProc<GlueMethod, GlueInstance, TArray<GlueContextValue>,
-  IGlueServerMethodResultCallback>);
+  IGlueServerMethodResultCallback, PSafeArray>);
 begin
   FHandlerLambda := handlerLambda;
 end;
@@ -653,7 +662,7 @@ caller: GlueInstance; requestValues: PSafeArray;
 const resultCallback: IGlueServerMethodResultCallback): HResult;
 begin
   FHandlerLambda(Method, caller, TSafeArrayExpander<GlueContextValue>.AsArray
-    (requestValues), resultCallback);
+    (requestValues), resultCallback, requestValues);
 
   Result := S_OK;
 end;

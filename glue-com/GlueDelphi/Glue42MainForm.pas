@@ -602,7 +602,8 @@ begin
   G42.RegisterMethod('GlueDelphi', TGlueRequestHandler.Create(
     procedure(Method: GlueMethod; caller: GlueInstance;
       requestArgs: TArray<GlueContextValue>;
-      resultCallback: IGlueServerMethodResultCallback)
+      resultCallback: IGlueServerMethodResultCallback;
+      _: PSafeArray)
     var
       gr: GlueResult;
     begin
