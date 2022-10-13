@@ -159,7 +159,7 @@ begin
   Row := 1;
   if JSONValue is TJSONArray then
   begin
-    FCaseListGrid.RowCount := (JSONValue as TJSONArray).Count;
+    FCaseListGrid.RowCount := 1 + (JSONValue as TJSONArray).Count;
     for jv in (JSONValue as TJSONArray) do
     begin
       if not(jv is TJSONObject) then
@@ -293,9 +293,22 @@ begin
           end
           else if action = 'update' then
           begin
-            FCaseListGrid.Cells[1, Row] :=
-              G42.GetValueByFieldPath(requestArgsSA, 'data.description')
-              .StringValue;
+            gv := G42.GetValueByFieldPath(requestArgsSA, 'data.description');
+            if gv.GlueType = GlueValueType_String then
+              FCaseListGrid.Cells[1, Row] := gv.StringValue;
+
+            gv := G42.GetValueByFieldPath(requestArgsSA, 'data.content');
+            if gv.GlueType = GlueValueType_String then
+              FCaseListGrid.Cells[2, Row] := gv.StringValue;
+
+            gv := G42.GetValueByFieldPath(requestArgsSA, 'data.contacts');
+            if gv.IsArray and (gv.GlueType = GlueValueType_String) then
+              FCaseListGrid.Cells[3, Row] := string.Join(',',
+                TSafeArrayExpander<WideString, string>.AsArray(gv.StringArray,
+                function(ws: WideString): string
+                begin
+                  Result := ws;
+                end));
           end;
 
         end;
