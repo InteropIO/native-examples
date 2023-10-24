@@ -9,11 +9,14 @@
 #include<QSpinBox>
 #include<QHBoxLayout>
 #include<QWidget>
+#include <QSemaphore>
+#include <QTimer>
 
 #include <QMenu>
 #include <QMenuBar>
 #include <QStatusBar>
 #include <string>
+#include <QDebug>
 
 #include <sstream>
 
@@ -34,16 +37,17 @@ int main(int argc, char *argv[]) {
 
     QStatusBar sb;
 
-
     w.setWindowTitle("Glue QT application with context menu");
 
     char clsName[MAX_PATH];
     GetClassNameA((HWND)w.winId(), clsName, MAX_PATH);
-    w.setWindowTitle(QString(clsName));
+    w.setWindowTitle(QString(clsName) + "       0x" + QString::fromStdString(HWNDToString((HWND)w.winId())));
 
-    QPushButton button(QString::fromStdString(HWNDToString((HWND)w.winId())), &w);
-    button.move(50, 50);
-    QObject::connect(&button, &QPushButton::clicked, [&w]() {
+    QPushButton init_btn("Init Glue", &w);
+    init_btn.move(50, 50);
+
+    QObject::connect(&init_btn, &QPushButton::clicked, [&w, &init_btn]() {
+        init_btn.setEnabled(false);
         glue_init("qt-glue-app", [](glue_state state, const char* message, const glue_payload* glue_payload, COOKIE cookie)
             {
                 if (state != glue_state::initialized)
@@ -64,6 +68,18 @@ int main(int argc, char *argv[]) {
                 }
 
                 auto wnd = static_cast<MainWindow*>(const_cast<void*>(cookie));
+
+                QSemaphore setup_sem;
+                // prepare the window - remove frame and sizing - make sure it's in the main thread
+                QMetaObject::invokeMethod(qApp, [&]() {
+                        wnd->setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+                        wnd->statusBar()->setSizeGripEnabled(false);
+                        wnd->show();
+                        setup_sem.release();
+                    }, Qt::QueuedConnection);
+
+                setup_sem.acquire();
+
                 glue_register_main_window((HWND)wnd->winId(),
                                           [](glue_app_command command, const void* callback, const ::glue_payload* payload, COOKIE cookie)
                                           {
@@ -94,11 +110,11 @@ int main(int argc, char *argv[]) {
             }, &w);
     });
 
-    QMenu *menu = new QMenu(&button);
-    QAction *action = new QAction("Context Menu Item", &button);
+    QMenu *menu = new QMenu(&init_btn);
+    QAction *action = new QAction("Context Menu Item", &init_btn);
     menu->addAction(action);
-    button.setContextMenuPolicy(ActionsContextMenu);
-    button.addAction(action);
+    init_btn.setContextMenuPolicy(ActionsContextMenu);
+    init_btn.addAction(action);
 
     auto *quit = new QAction("&Quit");
 
