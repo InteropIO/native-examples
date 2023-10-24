@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "GlueCLILib.h"
+#pragma comment(lib, "rpcrt4.lib")
 
 /**
  * \brief Dumps Glue payload.
@@ -56,62 +57,61 @@ int main()
 			{
 				SetEvent(glue_ready_event);
 			}
-		});
+		}, initEvent);
+
+	const auto wait_res = WaitForSingleObject(initEvent, 10000);
+	if (wait_res != WAIT_OBJECT_0)
+	{
+		std::cout << "Glue not started" << std::endl;
+		std::cin.ignore();
+		return -1;
+	}
 
 	glue_subscribe_endpoints_status([](const char* endpoint_name, const char* origin, bool state, COOKIE cookie)
 		{
 			std::cout << (state ? "+" : "-") << endpoint_name << " at " << origin << std::endl;
 		}, nullptr);
 
-	const auto wait_res = WaitForSingleObject(initEvent, 10000);
-	if (wait_res == WAIT_OBJECT_0)
-	{
-		glue_register_endpoint("glue_native_cpp",
-			[](const char* endpoint_name, COOKIE cookie, const glue_payload* payload, const void* endpoint)
-			{
-				std::cout << "Method " << endpoint_name << " invoked by " << payload->origin << "with " << payload->args_len << " args" << std::endl;
+	glue_register_endpoint("glue_native_cpp",
+		[](const char* endpoint_name, COOKIE cookie, const glue_payload* payload, const void* endpoint)
+		{
+			std::cout << "Method " << endpoint_name << " invoked by " << payload->origin << "with " << payload->args_len << " args" << std::endl;
 
-				std::cout << glue_read_s(payload->reader, "obj.name.first") << std::endl;
+			std::cout << glue_read_s(payload->reader, "obj.name.first") << std::endl;
 
-				handle_payload(endpoint_name, cookie, payload);
-				/*
-				// build result as structures
-				glue_arg result[] = {
-					glarg_i("xyz",5),
-					glarg_s("some_string", "that's the one"),
-					glarg_comp("sender", new glue_arg[]
+			handle_payload(endpoint_name, cookie, payload);
+			/*
+			// build result as structures
+			glue_arg result[] = {
+				glarg_i("xyz",5),
+				glarg_s("some_string", "that's the one"),
+				glarg_comp("sender", new glue_arg[]
+				{
+					glarg_comp("contact", new glue_arg[]
 					{
-						glarg_comp("contact", new glue_arg[]
-						{
-							glarg_s("name", "xaoc")
-						}, 1),
-						glarg_s("email", "xaoc@xaoc.xaoc")
-					}, 2),
-					glarg_dt("date", 1050500),
-					glarg_tuple("tuple_ibd", new glue_value[]{ glv_i(5), glv_b(true), glv_d(3.14) }, 3) };
-				// and then push it
+						glarg_s("name", "xaoc")
+					}, 1),
+					glarg_s("email", "xaoc@xaoc.xaoc")
+				}, 2),
+				glarg_dt("date", 1050500),
+				glarg_tuple("tuple_ibd", new glue_value[]{ glv_i(5), glv_b(true), glv_d(3.14) }, 3) };
+			// and then push it
 
-				glue_push_payload(endpoint, result, std::size(result));
-				*/
+			glue_push_payload(endpoint, result, std::size(result));
+			*/
 
-				// push json payload
-				glue_push_json_payload(endpoint, "{x: 5, y: {a: 51, s: \"hello\"}}");
+			// push json payload
+			glue_push_json_payload(endpoint, "{x: 5, y: {a: 51, s: \"hello\"}}");
 
-				// push failure
-				//glue_push_failure(endpoint, "no, something went wrong");
+			// push failure
+			//glue_push_failure(endpoint, "no, something went wrong");
 
-				// push void(no) result
-				//glue_push_payload(endpoint, nullptr, 0);
+			// push void(no) result
+			//glue_push_payload(endpoint, nullptr, 0);
 
-				// release any resources
-			}, "invocation cookie");
-	}
-	else
-	{
-		std::cout << "Glue not started" << std::endl;
-		std::cin.ignore();
-		return -1;
-	}
+			// release any resources
+		}, "invocation cookie");
+	
 
 	// get reader of the starting context
 	const auto cxt = glue_get_starting_context_reader();
@@ -142,6 +142,23 @@ int main()
 			return true;
 		}, nullptr);
 
+	auto get_new_guid = []()
+		{
+			std::string guid;
+
+			UUID uuid = { 0 };
+			UuidCreate(&uuid);
+
+			RPC_CSTR sz_uuid = nullptr;
+			if (UuidToStringA(&uuid, &sz_uuid) == RPC_S_OK)
+			{
+				guid = reinterpret_cast<char*>(sz_uuid);
+				RpcStringFreeA(&sz_uuid);
+			}
+
+			return guid;
+		};
+
 	while (true)
 	{
 		std::string input;
@@ -150,6 +167,17 @@ int main()
 		if (input == "quit")
 		{
 			break;
+		}
+
+		if (input == "notify")
+		{
+			std::string str("Notification from Native app");
+			std::string description = "This is a notification raised from a native C++ app using glue-cli-lib";
+			description.append("\n");
+			description.append(get_new_guid());
+			glue_raise_simple_notification(str.c_str(), description.c_str(), 
+			                               glue_notification_severity::glue_severity_high);
+			continue;
 		}
 
 		if (input.rfind("invokeall_") == 0)
