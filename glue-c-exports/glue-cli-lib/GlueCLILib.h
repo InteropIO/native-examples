@@ -14,7 +14,7 @@ std::underlying_type_t<Enumeration> enum_as_int(Enumeration const value)
 	return static_cast<std::underlying_type_t<Enumeration>>(value);
 }
 
-
+enum class glue_notification_severity { glue_severity_none, glue_severity_low, glue_severity_medium, glue_severity_high, glue_severity_critical };
 enum class glue_type { glue_none, glue_bool, glue_int, glue_long, glue_double, glue_string, glue_datetime, glue_tuple, glue_composite, glue_composite_array };
 
 struct glue_value;
@@ -551,6 +551,20 @@ extern "C" GLUE_LIB_API int __cdecl glue_app_announce_instance(const void* app_f
 	app_callback_function app_callback,
 	glue_window_callback_function window_callback,
 	COOKIE cookie = nullptr);
+
+/**
+ * \brief Raises a simple notification with the passed parameters.
+ * \param title The title of the notification
+ * \param description The description of the notification
+ * \param severity The severity of the notification
+ * \param cookie Optional callback cookie
+ * \return 0 if successful
+ */
+extern "C" GLUE_LIB_API int __cdecl glue_raise_simple_notification(const char* title, 
+	const char* description, 
+	glue_notification_severity severity = glue_notification_severity::glue_severity_none, 
+	COOKIE cookie = nullptr);
+
 
 /**
  * \brief Destroys subscriptions, streams, branches, methods, readers and releases any memory obtained by them.
