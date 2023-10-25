@@ -151,6 +151,14 @@ struct glue_payload
 };
 
 /**
+ * \brief Aids building glue args from json
+ * \param json The json string from which to build the args
+ * \param value The built glue_value.
+ * \return Reference to the builder. Call glue_destroy_resource to destroy the value and all resources associated with it.
+ */
+extern "C" GLUE_LIB_API const void* glue_build_glue_value(const char* json, glue_value& value);
+
+/**
  * \brief Deep releases Glue array/composite value.
  * \param v The Glue value to be released.
  */
