@@ -139,14 +139,23 @@ int main(int argc, char *argv[]) {
             {
                 glue_push_payload(result_endpoint, nullptr, 0);
 
-                double bid = glue_read_glue_value(payload->reader, "msg.eventMessages[0].marketDataEvents.bid").d;
-                double ask = glue_read_glue_value(payload->reader, "msg.eventMessages[0].marketDataEvents.ask").d;
+                const glue_value msgs = glue_read_glue_value(payload->reader, "msg.eventMessages");
 
                 const Context& context = *reinterpret_cast<const Context*>(cookie);
 
-                QMetaObject::invokeMethod(qApp, [bid, ask, &context]() {
-                        context.price_callback(bid, ask);
-                    }, Qt::QueuedConnection);
+                for (int i = 0; i < msgs.len; ++i)
+                {
+                    char field_path[256];
+                    auto _ = sprintf_s(field_path, "msg.eventMessages[%d].marketDataEvents.bid", i);
+                    const double bid = glue_read_glue_value(payload->reader, field_path).d;
+
+                    _ = sprintf_s(field_path, "msg.eventMessages[%d].marketDataEvents.ask", i);
+                    const double ask = glue_read_glue_value(payload->reader, field_path).d;
+
+                    QMetaObject::invokeMethod(qApp, [bid, ask, &context]() {
+                            context.price_callback(bid, ask);
+                        }, Qt::QueuedConnection);
+                }
             }, context);
 
         ::glue_value bbg_sub;
