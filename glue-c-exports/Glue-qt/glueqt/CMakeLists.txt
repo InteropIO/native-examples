@@ -43,7 +43,9 @@ else()
     endif()
 endif()
 
-target_link_libraries(glueqt PRIVATE Qt${QT_VERSION_MAJOR}::Widgets C:/work/tick42/github/native-examples/glue-c-exports/glue-cli-lib/GlueCLILib.lib)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets Charts REQUIRED)
+
+target_link_libraries(glueqt PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Charts C:/work/tick42/github/native-examples/glue-c-exports/glue-cli-lib/GlueCLILib.lib)
 
 set_target_properties(glueqt PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
@@ -60,6 +62,8 @@ install(TARGETS glueqt
 )
 
 include_directories(C:/work/tick42/github/native-examples/glue-c-exports/glue-cli-lib)
+include_directories(${Qt5Widgets_INCLUDES} ${Qt5Charts_INCLUDES})
+
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(glueqt)
