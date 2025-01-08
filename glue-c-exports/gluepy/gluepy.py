@@ -1,0 +1,394 @@
+import ctypes
+from ctypes import cast, POINTER, Structure, CFUNCTYPE, c_int, c_char_p, c_bool, c_double, c_longlong, c_void_p, c_uint32
+import os
+from enum import Enum
+
+from _ctypes import Union, byref
+
+# Enums
+
+class GlueState(Enum):
+    NONE = 0
+    CONNECTING = 1
+    CONNECTED = 2
+    INITIALIZED = 3
+    DISCONNECTED = 4
+
+class GlueNotificationSeverity(ctypes.c_int):
+    glue_severity_none = 0
+    glue_severity_low = 1
+    glue_severity_medium = 2
+    glue_severity_high = 3
+    glue_severity_critical = 4
+
+class GlueType(ctypes.c_int):
+    glue_none = 0
+    glue_bool = 1
+    glue_int = 2
+    glue_long = 3
+    glue_double = 4
+    glue_string = 5
+    glue_datetime = 6
+    glue_tuple = 7
+    glue_composite = 8
+    glue_composite_array = 9
+
+# union for glue_value
+class GlueValueUnion(Union):
+    _fields_ = [
+        ("b", c_bool),               # Boolean value
+        ("i", c_int),                # Integer value
+        ("l", c_longlong),           # Long long value
+        ("d", c_double),             # Double value
+        ("s", c_char_p),             # String value
+
+        ("bb", POINTER(c_bool)),     # Pointer to boolean array
+        ("ii", POINTER(c_int)),      # Pointer to integer array
+        ("ll", POINTER(c_longlong)), # Pointer to long long array
+        ("dd", POINTER(c_double)),   # Pointer to double array
+        ("ss", POINTER(c_char_p)),   # Pointer to string array
+
+        ("composite", c_void_p),    # Pointer to glue_arg - as void*
+        ("tuple", c_void_p)         # Pointer to another glue_value - as void*
+    ]
+
+class GlueValue(Structure):
+    _fields_ = [
+        ("data", GlueValueUnion),    # The union for actual data
+        ("type", c_int),             # glue_type (as integer)
+        ("len", c_int)               # Length for array types
+    ]
+
+class GlueArg(Structure):
+    _fields_ = [
+        ("name", c_char_p),
+        ("value", GlueValue)
+    ]
+
+class GluePayload(Structure):
+    _fields_ = [
+        ("reader", c_void_p),
+        ("origin", c_char_p),
+        ("status", c_int),
+        ("args", POINTER(GlueArg)),
+        ("args_len", c_int)
+    ]
+
+# Callback function types
+GlueInitCallback = CFUNCTYPE(None, c_int, c_char_p, POINTER(GluePayload), c_void_p)
+GlueWindowCallback = CFUNCTYPE(None, c_int, c_char_p, c_void_p)
+GlueEndpointStatusCallback = CFUNCTYPE(None, c_char_p, c_char_p, c_bool, c_void_p)
+InvocationCallback = CFUNCTYPE(None, c_char_p, c_void_p, POINTER(GluePayload), c_void_p)
+StreamCallback = CFUNCTYPE(c_bool, c_char_p, c_void_p, POINTER(GluePayload), POINTER(c_char_p))
+PayloadFunction = CFUNCTYPE(None, c_char_p, c_void_p, POINTER(GluePayload))
+ContextFunction = CFUNCTYPE(None, c_char_p, c_char_p, POINTER(GlueValue), c_void_p)
+AppCallbackFunction = CFUNCTYPE(None, c_int, c_void_p, POINTER(GluePayload), c_void_p)
+
+# Add the current folder to the DLL search path
+if hasattr(os, "add_dll_directory"):
+    os.add_dll_directory(os.getcwd())
+else:
+    os.environ["PATH"] += os.pathsep + os.getcwd()
+
+# Load DLL
+dll_path = os.path.join(os.getcwd(), "GlueCLILib.dll")
+glue_lib = ctypes.CDLL(dll_path)
+
+
+# Function prototypes
+glue_lib.glue_init.argtypes = [c_char_p, GlueInitCallback, c_void_p]
+glue_lib.glue_init.restype = c_int
+
+glue_lib.glue_subscribe_endpoints_status.argtypes = [GlueEndpointStatusCallback, c_void_p]
+glue_lib.glue_subscribe_endpoints_status.restype = c_void_p
+
+glue_lib.glue_set_save_state.argtypes = [InvocationCallback, c_void_p]
+glue_lib.glue_set_save_state.restype = c_int
+
+glue_lib.glue_register_window.argtypes = [c_void_p, GlueWindowCallback, c_char_p, c_void_p, c_bool]
+glue_lib.glue_register_window.restype = c_void_p
+
+glue_lib.glue_register_main_window.argtypes = [c_void_p, AppCallbackFunction, GlueWindowCallback, c_char_p, c_void_p]
+glue_lib.glue_register_main_window.restype = c_void_p
+
+glue_lib.glue_is_launched_by_gd.restype = c_bool
+
+glue_lib.glue_get_starting_context_reader.restype = c_void_p
+
+glue_lib.glue_register_endpoint.argtypes = [c_char_p, InvocationCallback, c_void_p]
+glue_lib.glue_register_endpoint.restype = c_int
+
+glue_lib.glue_register_streaming_endpoint.argtypes = [c_char_p, StreamCallback, InvocationCallback, c_void_p]
+glue_lib.glue_register_streaming_endpoint.restype = c_void_p
+
+glue_lib.glue_open_streaming_branch.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_open_streaming_branch.restype = c_void_p
+
+glue_lib.glue_invoke.argtypes = [c_char_p, POINTER(GlueArg), c_int, PayloadFunction, c_void_p]
+glue_lib.glue_invoke.restype = c_int
+
+glue_lib.glue_invoke_all.argtypes = [c_char_p, POINTER(GlueArg), c_int, CFUNCTYPE(None, c_char_p, c_void_p, POINTER(GluePayload), c_int), c_void_p]
+glue_lib.glue_invoke_all.restype = c_int
+
+glue_lib.glue_gc.restype = c_int
+
+glue_lib.glue_get_value_reader.argtypes = [GlueValue]
+glue_lib.glue_get_value_reader.restype = c_void_p
+
+glue_lib.glue_read_json.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_read_json.restype = c_char_p
+
+glue_lib.glue_read_glue_value.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_read_glue_value.restype = GlueValue
+
+glue_lib.glue_read_b.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_read_b.restype = c_bool
+
+glue_lib.glue_read_i.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_read_i.restype = c_int
+
+glue_lib.glue_read_l.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_read_l.restype = c_longlong
+
+glue_lib.glue_read_d.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_read_d.restype = c_double
+
+glue_lib.glue_read_s.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_read_s.restype = c_char_p
+
+glue_lib.glue_read_context.argtypes = [c_char_p, c_char_p, ContextFunction, c_void_p]
+glue_lib.glue_read_context.restype = c_int
+
+glue_lib.glue_read_context_sync.argtypes = [c_char_p]
+glue_lib.glue_read_context_sync.restype = c_void_p
+
+glue_lib.glue_write_context.argtypes = [c_char_p, c_char_p, GlueValue, c_bool]
+glue_lib.glue_write_context.restype = c_void_p
+
+glue_lib.glue_get_context_writer.argtypes = [c_char_p, c_char_p]
+glue_lib.glue_get_context_writer.restype = c_void_p
+
+glue_lib.glue_push_payload.argtypes = [c_void_p, POINTER(GlueArg), c_int, c_bool]
+glue_lib.glue_push_payload.restype = c_void_p
+
+glue_lib.glue_push_json_payload.argtypes = [c_void_p, c_char_p, c_bool]
+glue_lib.glue_push_json_payload.restype = c_void_p
+
+glue_lib.glue_push_failure.argtypes = [c_void_p, c_char_p]
+glue_lib.glue_push_failure.restype = c_int
+
+glue_lib.glue_subscribe_context.argtypes = [c_char_p, c_char_p, ContextFunction, c_void_p]
+glue_lib.glue_subscribe_context.restype = c_void_p
+
+glue_lib.glue_subscribe_stream.argtypes = [c_char_p, PayloadFunction, POINTER(GlueArg), c_int, c_void_p]
+glue_lib.glue_subscribe_stream.restype = c_void_p
+
+glue_lib.glue_subscribe_single_stream.argtypes = [c_char_p, PayloadFunction, POINTER(GlueArg), c_int, c_void_p]
+glue_lib.glue_subscribe_single_stream.restype = c_void_p
+
+glue_lib.glue_app_register_factory.argtypes = [c_char_p, AppCallbackFunction, c_char_p, c_void_p]
+glue_lib.glue_app_register_factory.restype = c_void_p
+
+glue_lib.glue_app_announce_instance.argtypes = [c_void_p, c_void_p, AppCallbackFunction, GlueWindowCallback, c_void_p]
+glue_lib.glue_app_announce_instance.restype = c_int
+
+glue_lib.glue_raise_simple_notification.argtypes = [c_char_p, c_char_p, GlueNotificationSeverity, c_void_p]
+glue_lib.glue_raise_simple_notification.restype = c_int
+
+glue_lib.glue_destroy_resource.argtypes = [c_void_p]
+glue_lib.glue_destroy_resource.restype = c_int
+
+glue_lib.glue_read_async_result.argtypes = [c_void_p, POINTER(POINTER(GlueValue)), c_uint32]
+glue_lib.glue_read_async_result.restype = c_int
+
+def get_glue_type_name(value_type):
+    glue_type_names = {
+        0: "glue_none",
+        1: "glue_bool",
+        2: "glue_int",
+        3: "glue_long",
+        4: "glue_double",
+        5: "glue_string",
+        6: "glue_datetime",
+        7: "glue_tuple",
+        8: "glue_composite",
+        9: "glue_composite_array",
+    }
+    return glue_type_names.get(value_type, f"Unknown({value_type})")
+
+def translate_glue_value(glue_value):
+    """
+    Converts a glue_value to a Python-friendly object.
+    """
+    value = None
+
+    # Handle scalar types
+    if glue_value.type == GlueType.glue_bool:
+        value = glue_value.data.b
+    elif glue_value.type == GlueType.glue_int:
+        value = glue_value.data.i
+    elif glue_value.type == GlueType.glue_long:
+        value = glue_value.data.l
+    elif glue_value.type == GlueType.glue_double:
+        value = glue_value.data.d
+    elif glue_value.type == GlueType.glue_string:
+        value = glue_value.data.s.decode("utf-8") if glue_value.data.s else None
+
+    # Handle arrays (support empty arrays as well)
+    elif glue_value.type == GlueType.glue_bool and glue_value.len >= 0:
+        value = [glue_value.data.bb[i] for i in range(glue_value.len)]
+    elif glue_value.type == GlueType.glue_int and glue_value.len >= 0:
+        value = [glue_value.data.ii[i] for i in range(glue_value.len)]
+    elif glue_value.type == GlueType.glue_long and glue_value.len >= 0:
+        value = [glue_value.data.ll[i] for i in range(glue_value.len)]
+    elif glue_value.type == GlueType.glue_double and glue_value.len >= 0:
+        value = [glue_value.data.dd[i] for i in range(glue_value.len)]
+    elif glue_value.type == GlueType.glue_string and glue_value.len >= 0:
+        value = [glue_value.data.ss[i].decode("utf-8") if glue_value.data.ss[i] else None for i in range(glue_value.len)]
+
+    # Handle composites (dictionary-like)
+    elif glue_value.type == GlueType.glue_composite:
+        composite = cast(glue_value.data.composite, POINTER(GlueArg * glue_value.len)).contents
+        value = {c.name.decode("utf-8"): translate_glue_value(c.value) for c in composite[:glue_value.len]}
+
+    # Handle tuples (list-like)
+    elif glue_value.type == GlueType.glue_tuple:
+        tuple_values = cast(glue_value.data.tuple, POINTER(GlueValue * glue_value.len)).contents
+        value = [translate_glue_value(tv) for tv in tuple_values[:glue_value.len]]
+
+    # Handle composite arrays (list of dictionaries)
+    elif glue_value.type == GlueType.glue_composite_array:
+        composite_array = cast(glue_value.data.composite, POINTER(GlueArg * glue_value.len)).contents
+        value = [translate_glue_value(c.value) for c in composite_array[:glue_value.len]]
+
+    return value
+
+def payload_to_object(payload):
+    """
+    Converts a glue_payload into a Python-friendly object.
+    Each glue_arg in the payload becomes a key-value pair in the resulting dictionary.
+    """
+    python_object = {}
+    args = payload.args
+
+    for i in range(payload.args_len):
+        arg = args[i]
+        name = arg.name.decode("utf-8") if arg.name else f"arg_{i}"
+        python_object[name] = translate_glue_value(arg.value)
+
+    return python_object
+
+def object_to_glue_value(py_object):
+    """
+    Translates a Python-native object to a glue_value structure.
+    Supports:
+    - Scalars (int, float, bool, str)
+    - Lists (homogeneous or mixed) - mixed are mapped to tuples
+    - Dictionaries (mapped to glue_composite)
+    - Lists of dictionaries (mapped to glue_composite_array)
+    """
+    glue_value = GlueValue()
+
+    # Handle scalars
+    if isinstance(py_object, bool):
+        glue_value.data.b = py_object
+        glue_value.type = GlueType.glue_bool
+        glue_value.len = -1
+    elif isinstance(py_object, int):
+        glue_value.data.l = py_object
+        glue_value.type = GlueType.glue_long
+        glue_value.len = -1
+    elif isinstance(py_object, float):
+        glue_value.data.d = py_object
+        glue_value.type = GlueType.glue_double
+        glue_value.len = -1
+    elif isinstance(py_object, str):
+        glue_value.data.s = py_object.encode("utf-8")
+        glue_value.type = GlueType.glue_string
+        glue_value.len = -1
+
+    # Handle lists (homogeneous or mixed types)
+    elif isinstance(py_object, list):
+        glue_value.len = len(py_object)
+        if all(isinstance(x, bool) for x in py_object):
+            glue_value.data.bb = (c_bool * len(py_object))(*py_object)
+            glue_value.type = GlueType.glue_bool
+        elif all(isinstance(x, int) for x in py_object):
+            glue_value.data.ll = (c_longlong * len(py_object))(*py_object)
+            glue_value.type = GlueType.glue_long
+        elif all(isinstance(x, float) for x in py_object):
+            glue_value.data.dd = (c_double * len(py_object))(*py_object)
+            glue_value.type = GlueType.glue_double
+        elif all(isinstance(x, str) for x in py_object):
+            glue_value.data.ss = (c_char_p * len(py_object))(*(s.encode("utf-8") for s in py_object))
+            glue_value.type = GlueType.glue_string
+        else:
+            # Mixed-type list: Convert each item to a glue_value and treat as a tuple
+            glue_values = (GlueValue * len(py_object))()
+            for i, item in enumerate(py_object):
+                glue_values[i] = object_to_glue_value(item)
+            glue_value.data.tuple = cast(glue_values, c_void_p) # cast to void*
+            glue_value.type = GlueType.glue_tuple
+
+    # Handle dictionaries (nested maps, composites)
+    elif isinstance(py_object, dict):
+        glue_args = (GlueArg * len(py_object))()
+        for i, (key, value) in enumerate(py_object.items()):
+            glue_args[i].name = key.encode("utf-8")
+            glue_args[i].value = object_to_glue_value(value)
+        glue_value.data.composite = cast(glue_args, c_void_p) # cast to void*
+        glue_value.type = GlueType.glue_composite
+        glue_value.len = len(py_object)
+
+    # Handle lists of dictionaries (mapped to glue_composite_array)
+    elif isinstance(py_object, list) and all(isinstance(x, dict) for x in py_object):
+        glue_args_array = (GlueArg * len(py_object))()
+        for i, item in enumerate(py_object):
+            glue_args_array[i].value = object_to_glue_value(item)
+        glue_value.data.composite = cast(glue_args_array, c_void_p) # cast to void*
+        glue_value.type = GlueType.glue_composite_array
+        glue_value.len = len(py_object)
+
+    # Unsupported types
+    else:
+        raise ValueError(f"Unsupported Python object type: {type(py_object)}")
+
+    return glue_value
+
+
+def create_glue_arg(name, py_value):
+    """
+    Creates a GlueArg from a name and a Python-native value.
+
+    Args:
+        name (str): The name of the GlueArg.
+        py_value (any): The Python-native value to be converted to a GlueValue.
+
+    Returns:
+        GlueArg: A GlueArg with the given name and value.
+    """
+    glue_arg = GlueArg()
+    glue_arg.name = name.encode("utf-8")
+    glue_arg.value = object_to_glue_value(py_value)
+    return glue_arg
+
+
+def create_args(py_map):
+    """
+    Creates an array of GlueArg structures from a Python dictionary.
+
+    Args:
+        py_map (dict): A Python dictionary where keys are strings and values can be any Python-native type.
+
+    Returns:
+        POINTER(GlueArg): A ctypes array of GlueArg structures.
+    """
+    if not isinstance(py_map, dict):
+        raise ValueError("Input must be a dictionary.")
+
+    glue_args = (GlueArg * len(py_map))()  # Create an array of GlueArg
+    for i, (key, value) in enumerate(py_map.items()):
+        glue_args[i].name = key.encode("utf-8")
+        glue_args[i].value = object_to_glue_value(value)  # Convert the value to GlueValue
+
+    return glue_args
