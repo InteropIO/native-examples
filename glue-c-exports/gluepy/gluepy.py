@@ -392,3 +392,106 @@ def create_args(py_map):
         glue_args[i].value = object_to_glue_value(value)  # Convert the value to GlueValue
 
     return glue_args
+
+
+class PayloadPusher:
+    def __init__(self, result_endpoint):
+        self.result_endpoint = result_endpoint
+
+    def push(self, result_obj):
+        """
+        Encodes multiple result objects and pushes them as a list of GlueArgs.
+
+        Args:
+            result_obj (dict): A dictionary where keys are argument names and values are their corresponding data.
+        """
+        glue_args = create_args(result_obj)  # Convert the dictionary to GlueArgs
+        glue_lib.glue_push_payload(
+            self.result_endpoint,
+            cast(glue_args, POINTER(GlueArg)),  # Correctly cast the GlueArg array
+            len(result_obj),
+            False
+        )
+
+callback_references = {}
+
+def register_endpoint(endpoint_name, argument_handler):
+    """
+    Registers a Glue endpoint and provides a result pusher for the user.
+
+    Args:
+        endpoint_name (str): Name of the endpoint to register.
+        argument_handler (callable): A lambda or function that processes decoded arguments
+                                     and uses the result pusher to send results.
+    """
+
+    def endpoint_callback(endpoint_name_ptr, cookie, payload_ptr, result_endpoint):
+        # Decode the endpoint name
+        endpoint_name = endpoint_name_ptr.decode("utf-8")
+
+        # Access and decode the payload
+        payload = payload_ptr.contents
+        args = [
+            {arg.name.decode("utf-8"): translate_glue_value(arg.value)}
+            for arg in payload.args[:payload.args_len]
+        ]
+
+        # Create a result pusher for the user
+        payload_pusher = PayloadPusher(result_endpoint)
+
+        # Call the argument handler with args and payload_pusher
+        argument_handler(args, payload_pusher)
+
+    # Register the endpoint using the callback
+    callback_instance = InvocationCallback(endpoint_callback)
+    glue_lib.glue_register_endpoint(endpoint_name.encode("utf-8"), callback_instance, None)
+    callback_references[endpoint_name] = callback_instance
+    return lambda: callback_references.pop(endpoint_name, None)
+
+
+from threading import Lock
+
+active_callbacks = {}
+callback_lock = Lock()
+
+def invoke_method(method_name, args, result_callback):
+    """
+    Simplifies invoking a Glue method by handling argument encoding and result translation.
+
+    Args:
+        method_name (str): The name of the method to invoke.
+        args (dict): A dictionary of arguments to pass to the method.
+        result_callback (callable): A callback to handle the translated result.
+    """
+    # Convert Python args to GlueArgs
+    glue_args = create_args(args)
+
+    # Define the result handler
+    def result_handler(origin, cookie, payload_ptr):
+        # Translate payload to Python-friendly result
+        payload = payload_ptr.contents
+        result = {
+            arg.name.decode("utf-8"): translate_glue_value(arg.value)
+            for arg in payload.args[:payload.args_len]
+        }
+        result_callback(result)
+
+        # Remove callback from active list after execution
+        with callback_lock:
+            del active_callbacks[method_name]
+
+    # Create the result callback instance
+    result_handler_instance = PayloadFunction(result_handler)
+
+    # Store the callback reference to ensure it stays alive
+    with callback_lock:
+        active_callbacks[method_name] = result_handler_instance
+
+    # Invoke the method
+    glue_lib.glue_invoke(
+        method_name.encode("utf-8"),
+        cast(glue_args, POINTER(GlueArg)),
+        len(glue_args),
+        result_handler_instance,
+        None
+    )
