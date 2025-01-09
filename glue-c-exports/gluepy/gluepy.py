@@ -1,13 +1,15 @@
+import asyncio
 import ctypes
 from ctypes import cast, POINTER, Structure, CFUNCTYPE, c_int, c_char_p, c_bool, c_double, c_longlong, c_void_p, c_uint32
 import os
+from dis import disco
 from enum import Enum
 
 from _ctypes import Union, byref
 
 # Enums
 
-class GlueState(Enum):
+class GlueState(ctypes.c_int):
     NONE = 0
     CONNECTING = 1
     CONNECTED = 2
@@ -512,5 +514,36 @@ def raise_notification(title, description, severity):
         title.encode("utf-8"),
         description.encode("utf-8"),
         severity,
-        None  # Hide the COOKIE parameter
+        None
     )
+
+init_callbacks = {}
+def initialize_glue(app_name, on_state_change=None):
+    """
+    Initializes Glue and returns an awaitable Future.
+    """
+    loop = asyncio.get_running_loop()
+    future = loop.create_future()
+
+    def glue_init_callback(state, message, glue_payload, cookie):
+        decoded_message = message.decode('utf-8')
+        if on_state_change:
+            on_state_change(state, decoded_message)
+        if state == GlueState.INITIALIZED:
+            loop.call_soon_threadsafe(future.set_result, True)
+        elif state ==GlueState.DISCONNECTED:
+            loop.call_soon_threadsafe(future.set_result, False)
+
+    init_callback = GlueInitCallback(glue_init_callback)
+    init_callbacks[app_name] = init_callback  # keep alive
+
+    def cleanup(_):
+        init_callbacks.pop(app_name, None) # cleanup
+
+    future.add_done_callback(cleanup)
+
+    result = glue_lib.glue_init(app_name.encode("utf-8"), init_callback, None)
+    if result != 0:
+        future.set_result(False)
+
+    return future
