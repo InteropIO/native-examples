@@ -58,6 +58,11 @@ register_endpoint(
 
 while (method := input("What method to invoke (q to quit): ")) != "q":
     print(f"Invoking method: {method}")
+    raise_notification(
+        "Raising method " + method,
+        "Invoking from Glue Python",
+        GlueNotificationSeverity.glue_severity_low
+    )
     invoke_method(
         method,
         {

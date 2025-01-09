@@ -495,3 +495,22 @@ def invoke_method(method_name, args, result_callback):
         result_handler_instance,
         None
     )
+
+def raise_notification(title, description, severity):
+    """
+    Simplifies raising a simple Glue notification.
+
+    Args:
+        title (str): The title of the notification.
+        description (str): The description of the notification.
+        severity (GlueNotificationSeverity): The severity of the notification (e.g., NONE, LOW, HIGH).
+
+    Example:
+        raise_notification("Test Title", "This is a test notification", GlueNotificationSeverity.HIGH)
+    """
+    glue_lib.glue_raise_simple_notification(
+        title.encode("utf-8"),
+        description.encode("utf-8"),
+        severity,
+        None  # Hide the COOKIE parameter
+    )
