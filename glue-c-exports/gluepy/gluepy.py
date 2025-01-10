@@ -95,6 +95,8 @@ else:
 # Load DLL
 dll_path = os.path.join(os.getcwd(), "GlueCLILib.dll")
 glue_lib = ctypes.CDLL(dll_path)
+import clr
+clr.AddReference(os.path.join(os.getcwd(), "ioConnectNET.dll"))
 
 
 # Function prototypes
