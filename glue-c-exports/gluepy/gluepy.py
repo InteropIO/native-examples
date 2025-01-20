@@ -415,8 +415,45 @@ class PayloadPusher:
             False
         )
 
-callback_references = {}
+context_callback_references = []
 
+def subscribe_context(context_name, field_path, on_update):
+    """
+    Sugar method for glue_subscribe_context.
+
+    Args:
+        context_name (str): Name of the context to subscribe to.
+        field_path (str): Field path to subscribe to.
+        on_update (callable): Callback function for updates.
+
+    Returns:
+        callable: A lambda that unsubscribes the callback when called.
+    """
+    def context_callback(context_name_ptr, field_path_ptr, value_ptr, cookie):
+        context_name = context_name_ptr.decode("utf-8")
+        field_path = field_path_ptr.decode("utf-8")
+        if value_ptr:
+            value = translate_glue_value(value_ptr.contents)
+        else:
+            value = None
+        on_update(context_name, field_path, value)
+
+    cxt_callback = ContextFunction(context_callback)
+    context_callback_references.append(cxt_callback)
+
+    subscription = glue_lib.glue_subscribe_context(
+        context_name.encode("utf-8"),
+        field_path.encode("utf-8"),
+        cxt_callback,
+        None
+    )
+
+    return lambda: (
+        glue_lib.glue_destroy_resource(subscription),
+        context_callback_references.remove(cxt_callback)
+    )
+
+endpoint_callback_references = {}
 def register_endpoint(endpoint_name, argument_handler):
     """
     Registers a Glue endpoint and provides a result pusher for the user.
@@ -447,8 +484,8 @@ def register_endpoint(endpoint_name, argument_handler):
     # Register the endpoint using the callback
     callback_instance = InvocationCallback(endpoint_callback)
     glue_lib.glue_register_endpoint(endpoint_name.encode("utf-8"), callback_instance, None)
-    callback_references[endpoint_name] = callback_instance
-    return lambda: callback_references.pop(endpoint_name, None)
+    endpoint_callback_references[endpoint_name] = callback_instance
+    return lambda: endpoint_callback_references.pop(endpoint_name, None)
 
 
 from threading import Lock

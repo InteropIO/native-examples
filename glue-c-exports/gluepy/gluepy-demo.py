@@ -43,6 +43,12 @@ async def main():
         )
     )
 
+    unsubscribe = subscribe_context(
+        "MyContext2",
+        "data.instrument.price",
+        lambda context, field, value: print(f"Update in {context} at {field}: {value}")
+    )
+
     while (method := input("What method to invoke (q to quit): ")) != "q":
         print(f"Invoking method: {method}")
         raise_notification(
