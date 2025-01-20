@@ -250,18 +250,27 @@ def translate_glue_value(glue_value):
 
     # Handle composites (dictionary-like)
     elif glue_value.type == GlueType.glue_composite:
-        composite = cast(glue_value.data.composite, POINTER(GlueArg * glue_value.len)).contents
-        value = {c.name.decode("utf-8"): translate_glue_value(c.value) for c in composite[:glue_value.len]}
+        if glue_value.data.composite:
+            composite = cast(glue_value.data.composite, POINTER(GlueArg * glue_value.len)).contents
+            value = {c.name.decode("utf-8"): translate_glue_value(c.value) for c in composite[:glue_value.len]}
+        else:
+            value = {}
 
     # Handle tuples (list-like)
     elif glue_value.type == GlueType.glue_tuple:
-        tuple_values = cast(glue_value.data.tuple, POINTER(GlueValue * glue_value.len)).contents
-        value = [translate_glue_value(tv) for tv in tuple_values[:glue_value.len]]
+        if glue_value.data.tuple:
+            tuple_values = cast(glue_value.data.tuple, POINTER(GlueValue * glue_value.len)).contents
+            value = [translate_glue_value(tv) for tv in tuple_values[:glue_value.len]]
+        else:
+            value = None
 
     # Handle composite arrays (list of dictionaries)
     elif glue_value.type == GlueType.glue_composite_array:
-        composite_array = cast(glue_value.data.composite, POINTER(GlueArg * glue_value.len)).contents
-        value = [translate_glue_value(c.value) for c in composite_array[:glue_value.len]]
+        if glue_value.data.composite:
+            composite_array = cast(glue_value.data.composite, POINTER(GlueArg * glue_value.len)).contents
+            value = [translate_glue_value(c.value) for c in composite_array[:glue_value.len]]
+        else:
+            value = None
 
     return value
 
