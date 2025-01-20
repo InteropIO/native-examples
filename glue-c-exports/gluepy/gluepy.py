@@ -2,8 +2,6 @@ import asyncio
 import ctypes
 from ctypes import cast, POINTER, Structure, CFUNCTYPE, c_int, c_char_p, c_bool, c_double, c_longlong, c_void_p, c_uint32
 import os
-from dis import disco
-from enum import Enum
 
 from _ctypes import Union, byref
 
