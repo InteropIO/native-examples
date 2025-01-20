@@ -469,11 +469,14 @@ def register_endpoint(endpoint_name, argument_handler):
         endpoint_name = endpoint_name_ptr.decode("utf-8")
 
         # Access and decode the payload
-        payload = payload_ptr.contents
-        args = [
-            {arg.name.decode("utf-8"): translate_glue_value(arg.value)}
-            for arg in payload.args[:payload.args_len]
-        ]
+        if payload_ptr:
+            payload = payload_ptr.contents
+            args = [
+                {arg.name.decode("utf-8"): translate_glue_value(arg.value)}
+                for arg in payload.args[:payload.args_len]
+            ]
+        else:
+            args = None
 
         # Create a result pusher for the user
         payload_pusher = PayloadPusher(result_endpoint)
@@ -508,11 +511,15 @@ def invoke_method(method_name, args, result_callback):
     # Define the result handler
     def result_handler(origin, cookie, payload_ptr):
         # Translate payload to Python-friendly result
-        payload = payload_ptr.contents
-        result = {
-            arg.name.decode("utf-8"): translate_glue_value(arg.value)
-            for arg in payload.args[:payload.args_len]
-        }
+
+        if payload_ptr:
+            payload = payload_ptr.contents
+            result = {
+                arg.name.decode("utf-8"): translate_glue_value(arg.value)
+                for arg in payload.args[:payload.args_len]
+            }
+        else:
+            result = None
         result_callback(result)
 
         # Remove callback from active list after execution
