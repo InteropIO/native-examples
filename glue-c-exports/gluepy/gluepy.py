@@ -298,6 +298,11 @@ def object_to_glue_value(py_object):
     """
     glue_value = GlueValue()
 
+    if not py_object:
+        glue_value.type = GlueType.glue_none
+        glue_value.len = -1
+        return glue_value
+
     # Handle scalars
     if isinstance(py_object, bool):
         glue_value.data.b = py_object
@@ -527,7 +532,8 @@ def invoke_method(method_name, args, result_callback):
             }
         else:
             result = None
-        result_callback(result)
+        if result_callback:
+            result_callback(result)
 
         # Remove callback from active list after execution
         with callback_lock:
