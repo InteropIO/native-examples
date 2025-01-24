@@ -51,6 +51,54 @@ async def main():
 
     while (method := input("What method to invoke (q to quit): ")) != "q":
         print(f"Invoking method: {method}")
+
+        notification = {
+            "notification": {
+                "title": "Something something dark side",
+                "severity": "Low",
+                "type": "Notification",
+                "category": "category",
+                "source": "source",
+                "description": "Come to the dark side.",
+                "glueRoutingDetailCallback": {
+                    "name": "NotificationRoutingDetail",
+                    "parameters": [
+                        {
+                            "customerId": "41234",
+                            "notification": "$(this)"
+                        }
+                    ],
+                },
+                "actions": [
+                    {
+                        "name": "AcceptNotification",
+                        "displayName": "Accept",
+                        "description": "Accept",
+                        "parameters": [
+                            {
+                                "customerId": "41234",
+                                "customerPrice": 3.14
+                            }
+                        ]
+                    },
+                    {
+                        "name": "RejectNotification",
+                        "displayName": "Reject",
+                        "description": "Reject",
+                        "parameters": [
+                            {
+                                "customerId": "41234",
+                                "customerPrice": 3.14
+                            }
+                        ]
+                    }
+                ],
+            }
+        }
+
+        # raise complex notification with callbacks etc.
+        invoke_method("T42.GNS.Publish.RaiseNotification", notification, None)
+
         raise_notification(
             "Raising method " + method,
             "Invoking from Glue Python",
