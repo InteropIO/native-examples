@@ -465,7 +465,6 @@ def subscribe_context(context_name, field_path, on_update):
         context_callback_references.remove(cxt_callback)
     )
 
-endpoint_callback_references = {}
 def register_endpoint(endpoint_name, argument_handler):
     """
     Registers a Glue endpoint and provides a result pusher for the user.
@@ -498,14 +497,17 @@ def register_endpoint(endpoint_name, argument_handler):
 
     # Register the endpoint using the callback
     callback_instance = InvocationCallback(endpoint_callback)
-    glue_lib.glue_register_endpoint(endpoint_name.encode("utf-8"), callback_instance, None)
-    endpoint_callback_references[endpoint_name] = callback_instance
-    return lambda: endpoint_callback_references.pop(endpoint_name, None)
+    ptr = glue_lib.glue_register_endpoint(endpoint_name.encode("utf-8"), callback_instance, None)
+    active_callbacks.append(callback_instance)
+    return lambda: (
+        active_callbacks.remove(callback_instance),
+        glue_lib.glue_destroy_resource(ptr)
+    )
 
 
 from threading import Lock
 
-active_callbacks = {}
+active_callbacks = []
 callback_lock = Lock()
 
 def invoke_method(method_name, args, result_callback):
@@ -536,15 +538,17 @@ def invoke_method(method_name, args, result_callback):
             result_callback(result)
 
         # Remove callback from active list after execution
-        with callback_lock:
-            del active_callbacks[method_name]
+        if result_callback:
+            with callback_lock:
+                if result_handler_instance in active_callbacks:
+                    active_callbacks.remove(result_handler_instance)
 
     if result_callback:
         # Create the result callback instance
         result_handler_instance = PayloadFunction(result_handler)
         # Store the callback reference to ensure it stays alive
         with callback_lock:
-            active_callbacks[method_name] = result_handler_instance
+            active_callbacks.append(result_handler_instance)
     else:
         result_handler_instance = ctypes.cast(None, PayloadFunction)
 
@@ -555,6 +559,21 @@ def invoke_method(method_name, args, result_callback):
         len(glue_args),
         result_handler_instance,
         None
+    )
+
+def subscribe_endpoint_status(callback):
+    def endpoint_status_callback(endpoint_name, origin, state, cookie):
+        endpoint_name = endpoint_name.decode('utf-8') if endpoint_name else ""
+        origin = origin.decode('utf-8') if origin else ""
+        callback(endpoint_name, origin, state)
+
+    callback_instance = GlueEndpointStatusCallback(endpoint_status_callback)
+    ptr = glue_lib.glue_subscribe_endpoints_status(callback_instance, None)
+    active_callbacks.append(callback_instance)
+
+    return lambda: (
+        active_callbacks.remove(callback_instance),
+        glue_lib.glue_destroy_resource(ptr)
     )
 
 def raise_notification(title, description, severity):
@@ -576,7 +595,6 @@ def raise_notification(title, description, severity):
         None
     )
 
-init_callbacks = {}
 def initialize_glue(app_name, on_state_change=None):
     """
     Initializes Glue and returns an awaitable Future.
@@ -594,10 +612,10 @@ def initialize_glue(app_name, on_state_change=None):
             loop.call_soon_threadsafe(future.set_result, False)
 
     init_callback = GlueInitCallback(glue_init_callback)
-    init_callbacks[app_name] = init_callback  # keep alive
+    active_callbacks.append(init_callback)  # keep alive
 
     def cleanup(_):
-        init_callbacks.pop(app_name, None) # cleanup
+        active_callbacks.remove(init_callback) # cleanup
 
     future.add_done_callback(cleanup)
 

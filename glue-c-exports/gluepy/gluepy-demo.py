@@ -1,8 +1,10 @@
 import uuid
+import platform
 
 from gluepy import *
 
 async def main():
+    print(platform.architecture()[0])
     print("Hello from Glue Python example\n")
 
     init_glue = initialize_glue(
@@ -16,14 +18,9 @@ async def main():
     if not result:
         exit(-1)
 
-    def endpoint_status_callback(endpoint_name, origin, state, cookie):
-        endpoint_name = endpoint_name.decode('utf-8') if endpoint_name else ""
-        origin = origin.decode('utf-8') if origin else ""
-        sign = "+" if state else "-"
-        print(f"{sign}{endpoint_name} at {origin}")
-
-    endpoint_status_callback_instance = GlueEndpointStatusCallback(endpoint_status_callback)
-    glue_lib.glue_subscribe_endpoints_status(endpoint_status_callback_instance, None)
+    subscribe_endpoint_status(
+        lambda endpoint_name, origin, state: print(f"{'+' if state else '-'}{endpoint_name} at {origin}")
+    )
 
     myContext2 = glue_lib.glue_read_context_sync(b"MyContext2")
     v = glue_lib.glue_read_glue_value(myContext2, b"data.instrument.price")
@@ -116,5 +113,7 @@ async def main():
             },
             lambda result: print(f"Result: {result}")
         )
+
+    print("Happy end")
 
 asyncio.run(main())
