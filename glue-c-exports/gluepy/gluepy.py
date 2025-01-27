@@ -539,12 +539,14 @@ def invoke_method(method_name, args, result_callback):
         with callback_lock:
             del active_callbacks[method_name]
 
-    # Create the result callback instance
-    result_handler_instance = PayloadFunction(result_handler)
-
-    # Store the callback reference to ensure it stays alive
-    with callback_lock:
-        active_callbacks[method_name] = result_handler_instance
+    if result_callback:
+        # Create the result callback instance
+        result_handler_instance = PayloadFunction(result_handler)
+        # Store the callback reference to ensure it stays alive
+        with callback_lock:
+            active_callbacks[method_name] = result_handler_instance
+    else:
+        result_handler_instance = ctypes.cast(None, PayloadFunction)
 
     # Invoke the method
     glue_lib.glue_invoke(
