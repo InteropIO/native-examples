@@ -1,10 +1,10 @@
 @echo off
 echo Downaloding glue-cli-lib package
-curl "https://globalcdn.nuget.org/packages/glue-cli-lib.1.5.0.nupkg?packageVersion=1.5.0" --output "./glue-cli-lib.nupkg"
+curl "https://globalcdn.nuget.org/packages/glue-cli-lib.1.6.0.nupkg?packageVersion=1.6.0" --output "./glue-cli-lib.nupkg"
 echo Downloading io.Connect.NET package
 echo Unpacking glue-cli-lib package
 tar -xf glue-cli-lib.nupkg glue-cli-lib
-curl "https://globalcdn.nuget.org/packages/io.connect.net.1.22.0.nupkg" --output "./io.connect.NET.nupkg"
+curl "https://globalcdn.nuget.org/packages/io.connect.net.1.27.0.nupkg" --output "./io.connect.NET.nupkg"
 echo Unpacking io.connect.NET package
 tar -xf io.connect.NET.nupkg lib/net45/
 
