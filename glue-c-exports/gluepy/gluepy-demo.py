@@ -75,6 +75,7 @@ async def main():
                 "actions": [
                     {
                         "name": "AcceptNotification",
+                        "target": "All",
                         "displayName": "Accept",
                         "description": "Accept",
                         "parameters": [
@@ -86,6 +87,7 @@ async def main():
                     },
                     {
                         "name": "RejectNotification",
+                        "target": "All",
                         "displayName": "Reject",
                         "description": "Reject",
                         "parameters": [
