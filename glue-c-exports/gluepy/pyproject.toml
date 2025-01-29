@@ -3,6 +3,4 @@ name = "gluepy"
 version = "0.1.0"
 description = "Demo ioConnect for Python"
 authors = ["Stanislav Peichev <stanislav.peichev@interop.io>"]
-dependencies = [
-    "pythonnet"
-]
+dependencies = []

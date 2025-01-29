@@ -93,9 +93,11 @@ else:
 # Load DLL
 dll_path = os.path.join(os.getcwd(), "GlueCLILib.dll")
 glue_lib = ctypes.CDLL(dll_path)
-import clr
 
 # Function prototypes
+glue_lib.glue_ensure_clr_.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+glue_lib.glue_ensure_clr_.restype = ctypes.c_int
+
 glue_lib.glue_init.argtypes = [c_char_p, GlueInitCallback, c_void_p]
 glue_lib.glue_init.restype = c_int
 
@@ -200,6 +202,19 @@ glue_lib.glue_destroy_resource.restype = c_int
 
 glue_lib.glue_read_async_result.argtypes = [c_void_p, POINTER(POINTER(GlueValue)), c_uint32]
 glue_lib.glue_read_async_result.restype = c_int
+
+def glue_ensure_clr(version=None, build_flavor=None, assembly=None):
+    """
+    Ensures the CLR is loaded with the specified version and build flavor.
+    :param version: The CLR version as a string (e.g., "v4.0.30319") or None for the latest version.
+    :param build_flavor: The build flavor (e.g., "wks" for workstation, "svr" for server) or None for default.
+    :param assembly: The assembly to initialize the glue clr with or None for default.
+    :return: Result code from glue_ensure_clr_.
+    """
+    version = version.encode('utf-8') if version else None
+    build_flavor = build_flavor.encode('utf-8') if build_flavor else None
+    assembly = assembly.encode('utf-8') if assembly else None
+    return glue_lib.glue_ensure_clr_(version, build_flavor, assembly)
 
 def get_glue_type_name(value_type):
     glue_type_names = {

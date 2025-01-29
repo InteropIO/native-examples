@@ -7,6 +7,12 @@ async def main():
     print(platform.architecture()[0])
     print("Hello from Glue Python example\n")
 
+    result = glue_ensure_clr()
+    if result == 0:
+        print("glue clr successfully initialized.")
+    else:
+        print(f"Failed to initialize glue clr, error code: {result}")
+
     init_glue = initialize_glue(
             "gluepy",
             on_state_change=lambda state, message: print(f"State: {state}, Message: {message}")
