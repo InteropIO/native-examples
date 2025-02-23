@@ -1,5 +1,6 @@
 # Load the Glue TCL extension
 load "GlueCLILib.dll"
+console show
 
 # Global variables
 set glue_ready 0
@@ -11,6 +12,7 @@ set notif_description "This is a test."
 set context_name "___channel___Red"                 
 set field_path "data.partyPortfolio.ric"                    
 set context_value "VOD:LN"
+set stream_name "T42.Wnd.OnEvent"
 
 # Create the main UI
 package require Tk
@@ -63,11 +65,12 @@ button .btnRegister -text "Register Method" -command {
         return
     }
     
-    proc $methodName {correlation_obj args} {
+    proc $methodName {endpoint_name args correlation_obj cookie} {
+		set methodName [lindex [info level 0] 0]
         log_message "Invoked method: $methodName with args: $args"
         
         set resultDict [dict create "key1" "value1" "key2" 42]
-        glue_push_result $correlation_obj $resultDict
+        glue_push_payload $correlation_obj $resultDict
     }
     
     glue_register_endpoint $methodName $methodName "my_custom_cookie"
@@ -167,15 +170,38 @@ grid .btnSubscribeContext -row 8 -column 0 -columnspan 2 -padx 5 -pady 5 -sticky
 grid .btnReadContext -row 8 -column 2 -columnspan 1 -padx 5 -pady 5 -sticky ew
 grid .btnWriteContext -row 8 -column 3 -columnspan 1 -padx 5 -pady 5 -sticky ew
 
+# Entry field for Stream Name
+label .streamLabel -text "Stream Name:"
+entry .streamEntry -textvariable stream_name
+grid .streamLabel -row 9 -column 0 -padx 5 -pady 5 -sticky e
+grid .streamEntry -row 9 -column 1 -padx 5 -pady 5 -sticky ew
+
+# Button to Subscribe to Stream
+button .btnSubscribeStream -text "Subscribe Stream" -command {
+    set stream [string trim [.streamEntry get]]
+    if {$stream eq ""} {
+        log_message "Error: Stream name cannot be empty."
+        return
+    }
+
+    proc on_stream_update {origin status args user_cookie} {
+        log_message "Stream Update: Origin='$origin', Status='$status', Args=$args, Cookie=$user_cookie"
+    }
+
+    set subscription [glue_subscribe_stream $stream on_stream_update {} "stream_cookie"]
+    log_message "Subscribed to Stream: $stream"
+}
+grid .btnSubscribeStream -row 10 -column 0 -columnspan 2 -padx 5 -pady 5 -sticky ew
+
 # Memo-like text widget for logging
 text .log -wrap word -height 15 -width 80 -yscrollcommand {.scroll set}
 scrollbar .scroll -command {.log yview}
-grid .log -row 9 -column 0 -columnspan 4 -sticky nsew
-grid .scroll -row 9 -column 4 -sticky ns
+grid .log -row 11 -column 0 -columnspan 4 -sticky nsew
+grid .scroll -row 11 -column 4 -sticky ns
 
 # Configure grid resizing
 grid columnconfigure . 1 -weight 1
-grid rowconfigure . 9 -weight 1
+grid rowconfigure . 11 -weight 1
 
 # Utility function to append logs
 proc log_message {msg} {
