@@ -1,9 +1,9 @@
 $curdir = (Get-Item .).FullName;
 "Cur dir is " + $curdir
 "Downloading io.Connect.NET package"
-(new-object System.Net.WebClient).DownloadFile("https://www.nuget.org/api/v2/package/io.Connect.NET/1.27.0",$curdir + "\io.Connect.NET.nupkg")
+(new-object System.Net.WebClient).DownloadFile("https://www.nuget.org/api/v2/package/io.Connect.NET/1.29.0",$curdir + "\io.Connect.NET.nupkg")
 "Downloading glue-cli-lib package"
-(new-object System.Net.WebClient).DownloadFile("https://globalcdn.nuget.org/packages/glue-cli-lib.1.6.0.nupkg?packageVersion=1.6.0", $curdir + "\glue-cli-lib.nupkg")
+(new-object System.Net.WebClient).DownloadFile("https://globalcdn.nuget.org/packages/glue-cli-lib.1.8.0.nupkg?packageVersion=1.8.0", $curdir + "\glue-cli-lib.nupkg")
 "Unpacking io.Connect.NET package"
 tar -xf io.Connect.NET.nupkg lib/net45/
 "Unpacking glue-cli-lib package"

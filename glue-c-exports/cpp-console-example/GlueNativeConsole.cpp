@@ -9,6 +9,8 @@
 #pragma execution_character_set("utf-8")
 #pragma comment(lib, "rpcrt4.lib")
 
+#include <vector>
+
 #include "GlueCLILib.h"
 
 
@@ -215,7 +217,7 @@ int main()
 		          }
 	          }, initEvent);
 
-	const auto wait_res = WaitForSingleObject(initEvent, 10000);
+	const auto wait_res = WaitForSingleObject(initEvent, 20000);
 	if (wait_res != WAIT_OBJECT_0)
 	{
 		std::cout << "Glue not started" << std::endl;
@@ -369,6 +371,33 @@ int main()
 			description.append(get_new_guid());
 			glue_raise_simple_notification(str.c_str(), description.c_str(),
 			                               glue_notification_severity::glue_severity_high);
+			continue;
+		}
+
+		if (input == "bbg")
+		{
+			std::string sec;
+			std::cout << "Enter security: ";
+			std::getline(std::cin, sec);
+
+			std::vector<std::string> storage;
+			storage.push_back(sec);
+
+			std::vector<const char*> securities;
+			securities.push_back(storage.back().c_str());
+
+			glue_arg args[] = {
+				glarg_s("mnemonic", "GP"),
+				glarg_s("tabName", "ChartTab"),
+				glarg_ss("securities", securities.data(), 1),
+			};
+
+			glue_invoke("T42.BBG.RunFunction", args, std::size(args),
+				[](const char* origin, const COOKIE cookie, const glue_payload* payload)
+				{
+					handle_payload(origin, cookie, payload);
+				}, "bbg");
+
 			continue;
 		}
 
