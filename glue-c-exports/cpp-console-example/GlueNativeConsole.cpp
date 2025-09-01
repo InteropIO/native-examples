@@ -9,6 +9,7 @@
 #pragma execution_character_set("utf-8")
 #pragma comment(lib, "rpcrt4.lib")
 
+#include <unordered_set>
 #include <vector>
 
 #include "GlueCLILib.h"
@@ -123,7 +124,7 @@ void traverse_glue_value(const glue_value& gv, std::stringstream& str)
 
 void handle_payload(const char* endpoint, const COOKIE cookie, const glue_payload* payload)
 {
-	std::cout << static_cast<const char*>(cookie) << ": Payload from " << endpoint << " with origin " <<
+	std::cout << (cookie == nullptr ? "" : static_cast<const char*>(cookie)) << ": Payload from " << endpoint << " with origin " <<
 		(payload->origin != nullptr ? payload->origin : "NULL") << " with status " << payload->status << std::endl;
 
 	for (int i = 0; i < payload->args_len; ++i)
@@ -341,6 +342,8 @@ int main()
 	{
 	}, nullptr, 0);
 
+	std::unordered_set<std::string> registrations;
+
 	while (true)
 	{
 		std::string input;
@@ -349,21 +352,16 @@ int main()
 		if (input == "gc")
 		{
 			glue_gc();
-			continue;
 		}
-
-		if (input == "dump")
+		else if (input == "dump")
 		{
 			_CrtDumpMemoryLeaks();
-			continue;
 		}
-
-		if (input == "quit")
+		else if (input == "quit")
 		{
 			break;
 		}
-
-		if (input == "notify")
+		else if (input == "notify")
 		{
 			std::string str("Notification from Native app");
 			std::string description = "This is a notification raised from a native C++ app using glue-cli-lib";
@@ -371,10 +369,8 @@ int main()
 			description.append(get_new_guid());
 			glue_raise_simple_notification(str.c_str(), description.c_str(),
 			                               glue_notification_severity::glue_severity_high);
-			continue;
 		}
-
-		if (input == "bbg")
+		else if (input == "bbg_fn")
 		{
 			std::string sec;
 			std::cout << "Enter security: ";
@@ -393,15 +389,101 @@ int main()
 			};
 
 			glue_invoke("T42.BBG.RunFunction", args, std::size(args),
-				[](const char* origin, const COOKIE cookie, const glue_payload* payload)
-				{
-					handle_payload(origin, cookie, payload);
-				}, "bbg");
-
-			continue;
+			            [](const char* origin, const COOKIE cookie, const glue_payload* payload)
+			            {
+				            handle_payload(origin, cookie, payload);
+			            }, "bbg");
 		}
+		else if (input == "bbg_req")
+		{
+			auto bbg_request_callback = "OnBBGMDFData";
+			if (registrations.insert(bbg_request_callback).second)
+			{
+				glue_register_endpoint(bbg_request_callback, [](const char* endpoint_name, COOKIE cookie, const glue_payload* payload, const void* result_endpoint) {
+					std::cout << "Method " << endpoint_name << " invoked by " << payload->origin << " with " << payload->args_len << " args" << std::endl;
 
-		if (input.rfind("invokeall_") == 0)
+					handle_payload(endpoint_name, cookie, payload);
+
+					glue_push_payload(result_endpoint, nullptr, 0);
+					}, "mdf_callback");
+			}
+
+			glue_arg args[] = {
+				glarg_s("requestCorrelationId", "{F987EF89-447D-46D0-BFEF-33016D7AADA5}"),
+				glarg_comp("settings", new glue_arg[]{
+					glarg_comp("sessionOptions", new glue_arg[]{
+						glarg_s("serverHost", "localhost"),
+						glarg_i("serverPort", 8194)
+					}, 2),
+					glarg_s("sessionName", "")
+				}, 2),
+				glarg_s("service", "//blp/refdata"),
+				glarg_s("operation", "IntradayBarRequest"),
+				glarg_comp("operationArgs", new glue_arg[]{
+					glarg_dt("startDateTime", 1546300800000),
+					glarg_dt("endDateTime", 1573344000000),
+					glarg_s("eventType", "TRADE"),
+					glarg_i("maxDataPoints", 100),
+					glarg_b("returnEids", true),
+					glarg_i("interval", 60),
+					glarg_s("security", "IBM US Equity")
+				}, 7),
+				glarg_s("callbackMethod", bbg_request_callback)
+			};
+
+			glue_invoke("T42.MDFApi.CreateRequest", args, std::size(args),
+				[](const char* origin, const COOKIE cookie, const glue_payload* payload) {
+					std::cout << "Invocation response from " << origin << std::endl;
+					handle_payload(origin, cookie, payload);
+				}, "request invocation");
+		}
+		else if (input == "bbg_sub")
+		{
+			auto bbg_sub_callback = "OnBBGMDFSubData";
+			if (registrations.insert(bbg_sub_callback).second)
+			{
+				glue_register_endpoint(bbg_sub_callback, [](const char* endpoint_name, COOKIE cookie, const glue_payload* payload, const void* result_endpoint) {
+					//std::cout << "Method " << endpoint_name << " invoked by " << payload->origin << " with " << payload->args_len << " args" << std::endl;
+
+					//handle_payload(endpoint_name, cookie, payload);
+
+					auto last = glue_read_d(payload->reader, "msg.eventMessages[0].MarketDataEvents.LAST_PRICE");
+					auto bid = glue_read_d(payload->reader, "msg.eventMessages[0].MarketDataEvents.BID");
+					auto ask = glue_read_d(payload->reader, "msg.eventMessages[0].MarketDataEvents.ASK");
+
+					std::cout << "Last: " << last << ", Bid: " << bid << ", Ask: " << ask << std::endl;
+
+					glue_push_payload(result_endpoint, nullptr, 0);
+					}, "mdf_callback");
+			}
+
+			glue_arg args[] = {
+				glarg_s("requestCorrelationId", "{3C37A11B-2EBC-4756-ABBD-A9943DCDFDA0}"),
+				glarg_comp("settings", new glue_arg[]{
+					glarg_comp("sessionOptions", new glue_arg[]{
+						glarg_s("serverHost", "localhost"),
+						glarg_i("serverPort", 8194)
+					}, 2),
+					glarg_s("sessionName", "")
+				}, 2),
+				glarg_s("service", "//blp/mktdata"),
+				glarg_comps("subscriptions", new glue_arg[]{
+					glarg_comp("1", new glue_arg[]{
+						glarg_s("subscriptionId", "{3C37A11B-2EBC-4756-ABBD-A9943DCDFDA0}-IBM US Equity"),
+						glarg_s("security", "IBM US Equity"),
+						glarg_s("fields", "LAST_PRICE,BID,ASK,BID_YIELD,ASK_YIELD")
+					}, 3)
+				}, 1),
+				glarg_s("callbackMethod", bbg_sub_callback)
+			};
+
+			glue_invoke("T42.MDFApi.CreateSubscriptionRequest", args, std::size(args),
+				[](const char* origin, const COOKIE cookie, const glue_payload* payload) {
+					std::cout << "Invocation response from " << origin << std::endl;
+					handle_payload(origin, cookie, payload);
+				}, "subscription request");
+		}
+		else if (input.rfind("invokeall_") == 0)
 		{
 			std::string method = input.substr(strlen("invokeall_"));
 			glue_invoke_all(method.c_str(), nullptr, 0,
@@ -419,10 +501,8 @@ int main()
 					                handle_payload(origin, cookie, &payload);
 				                }
 			                }, "multiple results");
-			continue;
 		}
-
-		if (input.rfind("invoke_") == 0)
+		else if (input.rfind("invoke_") == 0)
 		{
 			std::string method = input.substr(strlen("invoke_"));
 			glue_invoke(method.c_str(), nullptr, 0,
@@ -430,10 +510,8 @@ int main()
 			            {
 				            handle_payload(origin, cookie, glue_payload);
 			            }, "single result");
-			continue;
 		}
-
-		if (input.rfind("channel_", 0) == 0)
+		else if (input.rfind("channel_", 0) == 0)
 		{
 			std::string channel_name = "___channel___";
 			channel_name.append(input.substr(strlen("channel_")));
@@ -444,8 +522,8 @@ int main()
 			                     COOKIE cookie)
 			                  {
 				                  std::cout << context_name << "(" << field_path << ") = " << (glue_value == nullptr
-					                  ? "null"
-					                  : glue_value->s) << std::endl;
+						                  ? "null"
+						                  : glue_value->s) << std::endl;
 			                  }, nullptr);
 
 			const glue_value v = glue_read_glue_value(channel, "data.contact.psn");
@@ -473,10 +551,8 @@ int main()
 			glue_write_context(channel_name.c_str(), "data.contact.displayName", glv_s("Black Smith"));
 
 			glue_destroy_resource(channel);
-			continue;
 		}
-
-		if (input.rfind("writer_") == 0)
+		else if (input.rfind("writer_") == 0)
 		{
 			std::string channel_name = "___channel___";
 			channel_name.append(input.substr(strlen("writer_")));
@@ -493,9 +569,8 @@ int main()
 			std::string ss = zz;
 
 			std::cout << ss << std::endl;
-			continue;
 		}
-		if (input.rfind("push_") == 0)
+		else if (input.rfind("push_") == 0)
 		{
 			std::string branch = input.substr(strlen("push_"));
 
