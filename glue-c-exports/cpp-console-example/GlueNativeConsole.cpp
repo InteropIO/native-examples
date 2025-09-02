@@ -32,21 +32,32 @@ void method_invoked(const char* method, const COOKIE cookie, const glue_payload*
 	handle_payload(method, cookie, payload);
 
 	/*
-	glue_arg result[] = {
-		glarg_i("xyz",5),
-		glarg_s("some_string", "that's the one"),
-		glarg_comp("sender", new glue_arg[]
-		{
-			glarg_comp("contact", new glue_arg[]
-			{
-				glarg_s("name", "xaoc")
-			}, 1),
-			glarg_s("email", "xaoc@xaoc.xaoc")
-		}, 2),
-		glarg_dt("date", 1050500),
-		glarg_tuple("tuple_ibd", new glue_value[]{ glv_i(5), glv_b(true), glv_d(3.14) }, 3) };
+	glue_arg contactArgs[] = {
+	glarg_s("name", "xaoc")
+	};
 
-	glue_push_payload(invocation, result, std::size(result));*/
+	glue_arg senderArgs[] = {
+		glarg_comp("contact", contactArgs, std::size(contactArgs)),
+		glarg_s("email", "xaoc@xaoc.xaoc")
+	};
+
+	glue_value tupleValues[] = {
+		glv_i(5),
+		glv_b(true),
+		glv_d(3.14)
+	};
+
+	glue_arg result[] = {
+		glarg_i("xyz", 5),
+		glarg_s("some_string", "that's the one"),
+		glarg_comp("sender", senderArgs, std::size(senderArgs)),
+		glarg_dt("date", 1050500),
+		glarg_tuple("tuple_ibd", tupleValues, std::size(tupleValues))
+	};
+
+	glue_push_payload(invocation, result, std::size(result));
+	*/
+
 	glue_push_json_payload(invocation, "{x: 5, y: {a: 51, s: \"hello\"}}");
 	//glue_push_failure(invocation, "no, something went wrong");
 	//glue_push_payload(invocation, nullptr, 0);
@@ -283,24 +294,34 @@ int main()
 
 		                       handle_payload(endpoint_name, cookie, payload);
 
-		                       /*
-		                       glue_arg result[] = {
-			                       glarg_i("xyz",5),
-			                       glarg_s("some_string", "that's the one"),
-			                       glarg_comp("sender", new glue_arg[]
-			                       {
-				                       glarg_comp("contact", new glue_arg[]
-				                       {
-					                       glarg_s("name", "xaoc")
-				                       }, 1),
-				                       glarg_s("email", "xaoc@xaoc.xaoc")
-			                       }, 2),
-			                       glarg_dt("date", 1645551286008l),
-			                       glarg_tuple("tuple_ibd", new glue_value[]{ glv_i(5), glv_b(true), glv_d(3.14) }, 3) };
-		                       */
+							   /*
+							   glue_arg contactArgs[] = {
+							   glarg_s("name", "xaoc")
+							   };
 
-		                       //glue_push_payload(endpoint, result, std::size(result));
-		                       glue_push_json_payload(endpoint, "{x: 5, y: {a: 51, s: \"hello\"}}");
+							   glue_arg senderArgs[] = {
+								   glarg_comp("contact", contactArgs, std::size(contactArgs)),
+								   glarg_s("email", "xaoc@xaoc.xaoc")
+							   };
+
+							   glue_value tupleValues[] = {
+								   glv_i(5),
+								   glv_b(true),
+								   glv_d(3.14)
+							   };
+
+							   glue_arg result[] = {
+								   glarg_i("xyz", 5),
+								   glarg_s("some_string", "that's the one"),
+								   glarg_comp("sender", senderArgs, std::size(senderArgs)),
+								   glarg_dt("date", 1050500),
+								   glarg_tuple("tuple_ibd", tupleValues, std::size(tupleValues))
+							   };
+
+							   glue_push_payload(invocation, result, std::size(result));
+							   */
+
+							   glue_push_json_payload(endpoint, "{x: 5, y: {a: 51, s: \"hello\"}}");
 		                       //glue_push_failure(endpoint, "no, something went wrong");
 		                       //glue_push_payload(endpoint, nullptr, 0);
 
@@ -362,7 +383,7 @@ int main()
 		}
 		else if (input == "dump")
 		{
-			_CrtDumpMemoryLeaks();
+			//_CrtDumpMemoryLeaks();
 		}
 		else if (input == "quit")
 		{
@@ -425,17 +446,17 @@ int main()
 				handle_payload(nullptr, nullptr, payload);
 				};
 
-			std::vector<glue_arg> sessionOptions = {
+			glue_arg sessionOptions[] = {
 				glarg_s("serverHost", "localhost"),
 				glarg_i("serverPort", 8194)
 			};
 
-			std::vector<glue_arg> settings = {
-				glarg_comp("sessionOptions", sessionOptions.data(), sessionOptions.size()),
+			glue_arg settings[] = {
+				glarg_comp("sessionOptions", sessionOptions, std::size(sessionOptions)),
 				glarg_s("sessionName", "")
 			};
 
-			std::vector<glue_arg> operationArgs = {
+			glue_arg operationArgs[] = {
 				glarg_dt("startDateTime", 1546300800000),
 				glarg_dt("endDateTime", 1573344000000),
 				glarg_s("eventType", "TRADE"),
@@ -445,16 +466,16 @@ int main()
 				glarg_s("security", "IBM US Equity")
 			};
 
-			std::vector<glue_arg> args = {
+			glue_arg args[] = {
 				glarg_s("requestCorrelationId", request_id.data()),
-				glarg_comp("settings", settings.data(), settings.size()),
+				glarg_comp("settings", settings, std::size(settings)),
 				glarg_s("service", "//blp/refdata"),
 				glarg_s("operation", "IntradayBarRequest"),
-				glarg_comp("operationArgs", operationArgs.data(), operationArgs.size()),
+				glarg_comp("operationArgs", operationArgs, std::size(operationArgs)),
 				glarg_s("callbackMethod", bbg_request_callback)
 			};
 
-			glue_invoke("T42.MDFApi.CreateRequest", args.data(), args.size(),
+			glue_invoke("T42.MDFApi.CreateRequest", args, std::size(args),
 			            [](const char* origin, const COOKIE cookie, const glue_payload* payload)
 			            {
 				            std::cout << "Invocation response from " << origin << std::endl;
@@ -494,41 +515,40 @@ int main()
 					std::cout << "Last: " << last << ", Bid: " << bid << ", Ask: " << ask << std::endl;
 				};
 
-			std::vector<glue_arg> sessionOptions = {
+			glue_arg sessionOptions[] = {
 				glarg_s("serverHost", "localhost"),
 				glarg_i("serverPort", 8194)
 			};
 
-			std::vector<glue_arg> settings = {
-				glarg_comp("sessionOptions", sessionOptions.data(), sessionOptions.size()),
+			glue_arg settings[] = {
+				glarg_comp("sessionOptions", sessionOptions, std::size(sessionOptions)),
 				glarg_s("sessionName", "")
 			};
 
-			std::vector<glue_arg> subscription1 = {
+			glue_arg subscription1[] = {
 				glarg_s("subscriptionId", request_id.data()),
 				glarg_s("security", "IBM US Equity"),
 				glarg_s("fields", "LAST_PRICE,BID,ASK,BID_YIELD,ASK_YIELD")
 			};
 
-			std::vector<glue_arg> subscriptions = {
-				glarg_comp("1", subscription1.data(), subscription1.size())
+			glue_arg subscriptions[] = {
+				glarg_comp("1", subscription1, std::size(subscription1))
 			};
 
-			// Build the top-level args vector
-			std::vector<glue_arg> args = {
+			glue_arg args[] = {
 				glarg_s("requestCorrelationId", request_id.data()),
-				glarg_comp("settings", settings.data(), settings.size()),
+				glarg_comp("settings", settings, std::size(settings)),
 				glarg_s("service", "//blp/mktdata"),
-				glarg_comps("subscriptions", subscriptions.data(), subscriptions.size()),
+				glarg_comps("subscriptions", subscriptions, std::size(subscriptions)),
 				glarg_s("callbackMethod", bbg_sub_callback)
 			};
 
-			glue_invoke("T42.MDFApi.CreateSubscriptionRequest", args.data(), args.size(),
-			            [](const char* origin, const COOKIE cookie, const glue_payload* payload)
-			            {
-				            std::cout << "Invocation response from " << origin << std::endl;
-				            handle_payload(origin, cookie, payload);
-			            }, "subscription request");
+			glue_invoke("T42.MDFApi.CreateSubscriptionRequest", args, std::size(args),
+				[](const char* origin, const COOKIE cookie, const glue_payload* payload)
+				{
+					std::cout << "Invocation response from " << origin << std::endl;
+					handle_payload(origin, cookie, payload);
+				}, "subscription request");
 		}
 		else if (input.rfind("invokeall_") == 0)
 		{
