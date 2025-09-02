@@ -424,34 +424,42 @@ int main()
 				std::cout << "Callback for request " << request_id << " received." << std::endl;
 				handle_payload(nullptr, nullptr, payload);
 				};
-			glue_arg args[] = {
+
+			std::vector<glue_arg> sessionOptions = {
+				glarg_s("serverHost", "localhost"),
+				glarg_i("serverPort", 8194)
+			};
+
+			std::vector<glue_arg> settings = {
+				glarg_comp("sessionOptions", sessionOptions.data(), sessionOptions.size()),
+				glarg_s("sessionName", "")
+			};
+
+			std::vector<glue_arg> operationArgs = {
+				glarg_dt("startDateTime", 1546300800000),
+				glarg_dt("endDateTime", 1573344000000),
+				glarg_s("eventType", "TRADE"),
+				glarg_i("maxDataPoints", 100),
+				glarg_b("returnEids", true),
+				glarg_i("interval", 60),
+				glarg_s("security", "IBM US Equity")
+			};
+
+			std::vector<glue_arg> args = {
 				glarg_s("requestCorrelationId", request_id.data()),
-				glarg_comp("settings", new glue_arg[]{
-					glarg_comp("sessionOptions", new glue_arg[]{
-						glarg_s("serverHost", "localhost"),
-						glarg_i("serverPort", 8194)
-					}, 2),
-					glarg_s("sessionName", "")
-				}, 2),
+				glarg_comp("settings", settings.data(), settings.size()),
 				glarg_s("service", "//blp/refdata"),
 				glarg_s("operation", "IntradayBarRequest"),
-				glarg_comp("operationArgs", new glue_arg[]{
-					glarg_dt("startDateTime", 1546300800000),
-					glarg_dt("endDateTime", 1573344000000),
-					glarg_s("eventType", "TRADE"),
-					glarg_i("maxDataPoints", 100),
-					glarg_b("returnEids", true),
-					glarg_i("interval", 60),
-					glarg_s("security", "IBM US Equity")
-				}, 7),
+				glarg_comp("operationArgs", operationArgs.data(), operationArgs.size()),
 				glarg_s("callbackMethod", bbg_request_callback)
 			};
 
-			glue_invoke("T42.MDFApi.CreateRequest", args, std::size(args),
-				[](const char* origin, const COOKIE cookie, const glue_payload* payload) {
-					std::cout << "Invocation response from " << origin << std::endl;
-					handle_payload(origin, cookie, payload);
-				}, "bbg request");
+			glue_invoke("T42.MDFApi.CreateRequest", args.data(), args.size(),
+			            [](const char* origin, const COOKIE cookie, const glue_payload* payload)
+			            {
+				            std::cout << "Invocation response from " << origin << std::endl;
+				            handle_payload(origin, cookie, payload);
+			            }, "bbg request");
 		}
 		else if (input == "bbg_sub")
 		{
@@ -486,32 +494,41 @@ int main()
 					std::cout << "Last: " << last << ", Bid: " << bid << ", Ask: " << ask << std::endl;
 				};
 
-			glue_arg args[] = {
+			std::vector<glue_arg> sessionOptions = {
+				glarg_s("serverHost", "localhost"),
+				glarg_i("serverPort", 8194)
+			};
+
+			std::vector<glue_arg> settings = {
+				glarg_comp("sessionOptions", sessionOptions.data(), sessionOptions.size()),
+				glarg_s("sessionName", "")
+			};
+
+			std::vector<glue_arg> subscription1 = {
+				glarg_s("subscriptionId", request_id.data()),
+				glarg_s("security", "IBM US Equity"),
+				glarg_s("fields", "LAST_PRICE,BID,ASK,BID_YIELD,ASK_YIELD")
+			};
+
+			std::vector<glue_arg> subscriptions = {
+				glarg_comp("1", subscription1.data(), subscription1.size())
+			};
+
+			// Build the top-level args vector
+			std::vector<glue_arg> args = {
 				glarg_s("requestCorrelationId", request_id.data()),
-				glarg_comp("settings", new glue_arg[]{
-							   glarg_comp("sessionOptions", new glue_arg[]{
-											  glarg_s("serverHost", "localhost"),
-											  glarg_i("serverPort", 8194)
-										  }, 2),
-							   glarg_s("sessionName", "")
-						   }, 2),
+				glarg_comp("settings", settings.data(), settings.size()),
 				glarg_s("service", "//blp/mktdata"),
-				glarg_comps("subscriptions", new glue_arg[]{
-								glarg_comp("1", new glue_arg[]{
-											   glarg_s("subscriptionId",request_id.data()),
-											   glarg_s("security", "IBM US Equity"),
-											   glarg_s("fields", "LAST_PRICE,BID,ASK,BID_YIELD,ASK_YIELD")
-										   }, 3)
-							}, 1),
+				glarg_comps("subscriptions", subscriptions.data(), subscriptions.size()),
 				glarg_s("callbackMethod", bbg_sub_callback)
 			};
 
-			glue_invoke("T42.MDFApi.CreateSubscriptionRequest", args, std::size(args),
-				[](const char* origin, const COOKIE cookie, const glue_payload* payload)
-				{
-					std::cout << "Invocation response from " << origin << std::endl;
-					handle_payload(origin, cookie, payload);
-				}, "subscription request");
+			glue_invoke("T42.MDFApi.CreateSubscriptionRequest", args.data(), args.size(),
+			            [](const char* origin, const COOKIE cookie, const glue_payload* payload)
+			            {
+				            std::cout << "Invocation response from " << origin << std::endl;
+				            handle_payload(origin, cookie, payload);
+			            }, "subscription request");
 		}
 		else if (input.rfind("invokeall_") == 0)
 		{
