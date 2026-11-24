@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <string>
 #include "ChildView.h"
 
 class CMainFrame : public CFrameWnd
@@ -30,19 +31,28 @@ public:
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
-	void OnWindowEvent(glue_window_command command, const char* context_name);
 #endif
+	void OnWindowEvent(glue_window_command command, const char* state_message);
+	void AppendLog(const char* utf8_text);
+	virtual void RecalcLayout(BOOL bNotify = TRUE);
 
 protected:  // control bar embedded members
+	CEdit             m_log;
 	CToolBar          m_wndToolBar;
 	CStatusBar        m_wndStatusBar;
 	CButton			  m_button;
+	CListBox          m_list;
+	std::string       m_context = "GlueCExp_MFC";
+	int               m_clicks = 0;
 
 // Generated message map functions
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnFileClose();
 	afx_msg void OnClose();
+	afx_msg void OnDestroy();
+	afx_msg void OnGlueButtonClicked();
+	afx_msg void OnNameSelected();
 	afx_msg void OnApplicationLook(UINT id);
 	afx_msg void OnUpdateApplicationLook(CCmdUI* pCmdUI);
 	DECLARE_MESSAGE_MAP()

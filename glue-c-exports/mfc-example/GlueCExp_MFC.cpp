@@ -57,7 +57,6 @@ void glue_window_callback(const glue_window_command state, const char* state_mes
 	main_wnd->OnWindowEvent(state, state_message);
 }
 
-// handle app instance commands
 void app_callback(const glue_app_command command, const void* callback, const glue_payload* payload, COOKIE cookie)
 {
 	auto app_wnd = static_cast<CMainFrame*>(const_cast<void*>(cookie));
@@ -161,8 +160,8 @@ BOOL CGlueCExpMFCApp::InitInstance()
 	//TODO: add additional member variables and load calls for
 	//	additional menu types your application may need
 	HINSTANCE hInst = AfxGetResourceHandle();
-	m_hMDIMenu = ::LoadMenu(hInst, MAKEINTRESOURCE(IDR_GlueCExpMFCTYPE));
-	m_hMDIAccel = ::LoadAccelerators(hInst, MAKEINTRESOURCE(IDR_GlueCExpMFCTYPE));
+	m_hMDIMenu = ::LoadMenu(hInst, 	MAKEINTRESOURCE(IDR_GlueCExpMFCTYPE));
+		m_hMDIAccel = ::LoadAccelerators(hInst, MAKEINTRESOURCE(IDR_GlueCExpMFCTYPE));
 
 	// The one and only window has been initialized, so show and update it
 	pFrame->ShowWindow(SW_SHOW);
@@ -231,7 +230,8 @@ BOOL CGlueCExpMFCApp::InitInstance()
 					case glue_app_command::init:
 					{
 						auto json = glue_read_json(payload->reader, nullptr);
-						MessageBoxA(0, json, "Glue restore state", 0);
+						auto main_wnd = static_cast<CMainFrame*>(AfxGetApp()->m_pMainWnd);
+						main_wnd->AppendLog((std::string("Glue restore state: ") + (json != nullptr ? json : "(none)")).c_str());
 					}
 					break;
 					case glue_app_command::save:
@@ -249,7 +249,7 @@ BOOL CGlueCExpMFCApp::InitInstance()
 				{
 					auto main_wnd = static_cast<CMainFrame*>(const_cast<void*>(cookie));
 					main_wnd->OnWindowEvent(command, context_name);
-				}, "Main MFC", app->m_pMainWnd);			
+				}, "Main MFC", app->m_pMainWnd);
 
 			/****
 				 **** Here you can use Glue to:
@@ -259,7 +259,7 @@ BOOL CGlueCExpMFCApp::InitInstance()
 				 **** glue_write_context - writes to a context
 				 **** glue_invoke_all - invokes endpoint
 				 ****/
-		}, this);
+		}, this, glue_features_default | glue_features_use_custom_dispatcher); // UI-thread dispatcher: factory/window callbacks run on the MFC thread
 
 	return TRUE;
 }
