@@ -98,7 +98,7 @@ glue_lib = ctypes.CDLL(dll_path)
 glue_lib.glue_ensure_clr_.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
 glue_lib.glue_ensure_clr_.restype = ctypes.c_int
 
-glue_lib.glue_init.argtypes = [c_char_p, GlueInitCallback, c_void_p]
+glue_lib.glue_init.argtypes = [c_char_p, GlueInitCallback, c_void_p, c_int]
 glue_lib.glue_init.restype = c_int
 
 glue_lib.glue_subscribe_endpoints_status.argtypes = [GlueEndpointStatusCallback, c_void_p]
@@ -621,6 +621,8 @@ def initialize_glue(app_name, on_state_change=None):
         decoded_message = message.decode('utf-8')
         if on_state_change:
             on_state_change(state, decoded_message)
+        if future.done():
+            return
         if state == GlueState.INITIALIZED:
             loop.call_soon_threadsafe(future.set_result, True)
         elif state ==GlueState.DISCONNECTED:
@@ -629,12 +631,7 @@ def initialize_glue(app_name, on_state_change=None):
     init_callback = GlueInitCallback(glue_init_callback)
     active_callbacks.append(init_callback)  # keep alive
 
-    def cleanup(_):
-        active_callbacks.remove(init_callback) # cleanup
-
-    future.add_done_callback(cleanup)
-
-    result = glue_lib.glue_init(app_name.encode("utf-8"), init_callback, None)
+    result = glue_lib.glue_init(app_name.encode("utf-8"), init_callback, None, 0)  # 0 = glue_features_default
     if result != 0:
         future.set_result(False)
 
